@@ -146,6 +146,10 @@ final startupInitializationTasksProvider = Provider<StartupInitializationTasks>(
             StorageKeys.queueExecutionStateBox,
             hivePath: hivePath,
           ),
+          _openHiveBoxIfNeeded<String>(
+            StorageKeys.promptRecipesBox,
+            hivePath: hivePath,
+          ),
           ImageMetadataService().initialize(),
           ScanStateManager.instance.initialize(),
           ShortcutStorage().init(),

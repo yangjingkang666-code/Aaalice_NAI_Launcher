@@ -196,6 +196,9 @@ class StorageKeys {
   static const String replicationQueueBox = 'replication_queue';
   static const String replicationQueueData = 'replication_queue_data';
 
+  // Prompt Recipe Keys (生成配方相关)
+  static const String promptRecipesBox = 'prompt_recipes';
+
   // Queue Settings (队列设置)
   static const String queueRetryCount = 'queue_retry_count';
   static const String queueRetryInterval = 'queue_retry_interval';
