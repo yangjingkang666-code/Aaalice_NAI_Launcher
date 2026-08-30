@@ -19,6 +19,8 @@ import 'package:nai_launcher/data/models/gallery/nai_image_metadata.dart';
 import 'package:nai_launcher/data/services/metadata/unified_metadata_parser.dart';
 import 'package:nai_launcher/data/models/image/image_params.dart';
 import 'package:nai_launcher/data/models/image/image_stream_chunk.dart';
+import 'package:nai_launcher/data/models/recipe/prompt_recipe.dart';
+import 'package:nai_launcher/data/repositories/prompt_recipe_repository.dart';
 import 'package:nai_launcher/data/models/user/user_subscription.dart';
 import 'package:nai_launcher/data/models/vibe/vibe_reference.dart';
 import 'package:nai_launcher/presentation/providers/auth_provider.dart';
@@ -28,6 +30,7 @@ import 'package:nai_launcher/presentation/providers/image_save_settings_provider
 import 'package:nai_launcher/presentation/providers/local_gallery_provider.dart';
 import 'package:nai_launcher/presentation/providers/subscription_provider.dart';
 import 'package:nai_launcher/presentation/providers/notification_settings_provider.dart';
+import 'package:nai_launcher/presentation/services/generation_history_storage_service.dart';
 
 class MockNAIImageGenerationApiService extends Mock
     implements NAIImageGenerationApiService {}
@@ -86,6 +89,36 @@ class TestLocalGalleryNotifier extends LocalGalleryNotifier {
   @override
   Future<int> addNewlySavedImages(List<String> filePaths) async =>
       filePaths.length;
+}
+
+class _MemoryPromptRecipeRepository implements PromptRecipeRepository {
+  PromptRecipe? saved;
+
+  @override
+  Future<PromptRecipe?> get(String id) async => saved?.id == id ? saved : null;
+
+  @override
+  Future<PromptRecipe?> getByGalleryItemId(String galleryItemId) async => null;
+
+  @override
+  Future<List<PromptRecipe>> list() async =>
+      saved == null ? const [] : [saved!];
+
+  @override
+  Future<List<PromptRecipe>> listChildren(String parentRecipeId) async => [
+    if (saved?.parentRecipeId == parentRecipeId) saved!,
+  ];
+
+  @override
+  Future<PromptRecipe> save(PromptRecipe recipe) async {
+    saved = recipe;
+    return recipe;
+  }
+
+  @override
+  Future<void> remove(String id) async {
+    if (saved?.id == id) saved = null;
+  }
 }
 
 void main() {
@@ -478,6 +511,96 @@ void main() {
             container.read(subscriptionNotifierProvider.notifier)
                 as TestSubscriptionNotifier;
         expect(subscriptionNotifier.refreshBalanceCallCount, 1);
+      },
+    );
+
+    test(
+      'successful generation links current and persisted history to one recipe',
+      () async {
+        final mockApiService = MockNAIImageGenerationApiService();
+        final recipeRepository = _MemoryPromptRecipeRepository();
+        when(
+          () => mockApiService.generateImage(
+            any(),
+            onProgress: any(named: 'onProgress'),
+            focusedInpaintEnabled: any(named: 'focusedInpaintEnabled'),
+            minimumContextMegaPixels: any(named: 'minimumContextMegaPixels'),
+            focusedSelectionRect: any(named: 'focusedSelectionRect'),
+          ),
+        ).thenAnswer((_) async => fail('stream generation should be selected'));
+        when(
+          () => mockApiService.generateImageCancellable(
+            any(),
+            onProgress: any(named: 'onProgress'),
+            focusedInpaintEnabled: any(named: 'focusedInpaintEnabled'),
+            minimumContextMegaPixels: any(named: 'minimumContextMegaPixels'),
+            focusedSelectionRect: any(named: 'focusedSelectionRect'),
+          ),
+        ).thenAnswer((_) async => fail('stream generation should be selected'));
+        when(
+          () => mockApiService.generateImageStream(
+            any(),
+            focusedInpaintEnabled: any(named: 'focusedInpaintEnabled'),
+            minimumContextMegaPixels: any(named: 'minimumContextMegaPixels'),
+            focusedSelectionRect: any(named: 'focusedSelectionRect'),
+          ),
+        ).thenAnswer(
+          (_) => Stream.value(
+            ImageStreamChunk.complete(
+              _validImageBytes(width: 512, height: 768),
+            ),
+          ),
+        );
+
+        container.dispose();
+        container = _createAuthenticatedContainer(
+          overrides: [
+            naiImageGenerationApiServiceProvider.overrideWithValue(
+              mockApiService,
+            ),
+            generationSessionPersistenceEnabledProvider.overrideWithValue(true),
+            promptRecipeRepositoryProvider.overrideWithValue(recipeRepository),
+            subscriptionNotifierProvider.overrideWith(
+              TestSubscriptionNotifier.new,
+            ),
+          ],
+        );
+        addTearDown(() async {
+          await Hive.box(StorageKeys.historyBox).clear();
+          if (Hive.isBoxOpen(StorageKeys.promptRecipesBox)) {
+            await Hive.box(StorageKeys.promptRecipesBox).clear();
+          }
+        });
+
+        await container
+            .read(notificationSettingsNotifierProvider.notifier)
+            .setSoundEnabled(false);
+        await container
+            .read(imageSaveSettingsNotifierProvider.notifier)
+            .setAutoSave(false);
+
+        final notifier = container.read(
+          imageGenerationNotifierProvider.notifier,
+        );
+        final params = container
+            .read(generationParamsNotifierProvider)
+            .copyWith(prompt: 'recipe integration', width: 512, height: 768);
+        await notifier.generate(params);
+
+        final state = container.read(imageGenerationNotifierProvider);
+        final recipeId = recipeRepository.saved?.id;
+        expect(recipeId, isNotNull);
+        expect(state.currentImages, hasLength(1));
+        expect(state.history.first.recipeId, recipeId);
+        expect(state.currentImages.first.recipeId, recipeId);
+        expect(state.displayImages.first.recipeId, recipeId);
+
+        await notifier.flushGenerationHistory();
+        final restored = await GenerationHistoryStorageService(
+          enabled: true,
+        ).load();
+        expect(restored, hasLength(1));
+        expect(restored.single.recipeId, recipeId);
       },
     );
 

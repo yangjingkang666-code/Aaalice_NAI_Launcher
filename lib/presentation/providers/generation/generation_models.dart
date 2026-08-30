@@ -99,6 +99,11 @@ class GeneratedImage {
   /// 当图像被保存到磁盘后，此字段会被填充
   final String? filePath;
 
+  /// 与这张结果图对应的持久化 PromptRecipe ID（如果有）。
+  ///
+  /// 该关联只保存一个小型 ID，不会把配方内容或源图字节塞进历史图像记录。
+  final String? recipeId;
+
   GeneratedImage({
     required this.id,
     required this.bytes,
@@ -110,6 +115,7 @@ class GeneratedImage {
     this.comparisonSource,
     this.preserveOriginalBytesOnSave = false,
     this.filePath,
+    this.recipeId,
   }) : createdAt = createdAt ?? DateTime.now();
 
   /// 创建新的生成图像（自动生成ID）
@@ -121,6 +127,7 @@ class GeneratedImage {
     NaiImageMetadata? metadata,
     ImageComparisonSource? comparisonSource,
     bool preserveOriginalBytesOnSave = false,
+    String? recipeId,
   }) {
     final encodedSize = NaiResolutionAdapter.readImageSize(bytes);
     return GeneratedImage(
@@ -132,6 +139,7 @@ class GeneratedImage {
       metadata: metadata,
       comparisonSource: comparisonSource,
       preserveOriginalBytesOnSave: preserveOriginalBytesOnSave,
+      recipeId: recipeId,
     );
   }
 
@@ -148,6 +156,24 @@ class GeneratedImage {
       comparisonSource: comparisonSource,
       preserveOriginalBytesOnSave: preserveOriginalBytesOnSave,
       filePath: path,
+      recipeId: recipeId,
+    );
+  }
+
+  /// 创建关联到配方的图像副本。
+  GeneratedImage copyWithRecipeId(String? value) {
+    return GeneratedImage(
+      id: id,
+      bytes: bytes,
+      width: width,
+      height: height,
+      createdAt: createdAt,
+      kind: kind,
+      metadata: metadata,
+      comparisonSource: comparisonSource,
+      preserveOriginalBytesOnSave: preserveOriginalBytesOnSave,
+      filePath: filePath,
+      recipeId: value,
     );
   }
 

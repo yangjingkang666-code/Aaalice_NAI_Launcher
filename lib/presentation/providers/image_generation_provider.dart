@@ -25,7 +25,9 @@ import '../../data/models/fixed_tag/fixed_tag_entry.dart';
 import '../../data/models/gallery/nai_image_metadata.dart';
 import '../../data/models/image/image_params.dart';
 import '../../data/models/image/image_stream_chunk.dart';
+import '../../data/models/recipe/prompt_recipe.dart';
 import '../../data/repositories/gallery_folder_repository.dart';
+import '../../data/repositories/prompt_recipe_repository.dart';
 import '../../data/services/alias_resolver_service.dart';
 import '../../data/services/statistics_cache_service.dart';
 import '../services/generation_history_storage_service.dart';
@@ -93,9 +95,12 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
   ImageGenerationCoordinator? _coordinator;
   final Set<int> _foregroundInvocationIds = <int>{};
   final Map<String, String?> _persistedHistoryFilePaths = <String, String?>{};
+  final Map<String, String?> _persistedHistoryRecipeIds = <String, String?>{};
   final Map<String, _RememberedStreamPreview> _streamPreviews = {};
   final Set<String> _failedSnapshotKeys = {};
   ImageComparisonSource? _activeComparisonSource;
+  ImageParams? _activeRecipeParams;
+  List<RecipeCharacter> _activeRecipeCharacters = const [];
   bool _isDisposed = false;
   int _lifecycleEpoch = 0;
 
@@ -106,6 +111,8 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
       _lifecycleEpoch++;
       _generationInvocationStarting = false;
       _activeComparisonSource = null;
+      _activeRecipeParams = null;
+      _activeRecipeCharacters = const [];
       final invocationSettled = _generationInvocationSettled;
       _generationInvocationSettled = null;
       if (invocationSettled != null && !invocationSettled.isCompleted) {
@@ -132,6 +139,9 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
         addGalleryImages: gallery.addNewlySavedImages,
         refreshGallery: gallery.refresh,
         incrementStatistics: statistics.incrementImageCount,
+        recipeRepository: ref.read(generationSessionPersistenceEnabledProvider)
+            ? ref.read(promptRecipeRepositoryProvider)
+            : null,
       ),
     );
   }
@@ -198,6 +208,11 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
         ..addEntries(
           restored.map((image) => MapEntry(image.id, image.filePath)),
         );
+      _persistedHistoryRecipeIds
+        ..clear()
+        ..addEntries(
+          restored.map((image) => MapEntry(image.id, image.recipeId)),
+        );
       state = state.copyWith(
         status: state.status == GenerationStatus.idle
             ? GenerationStatus.completed
@@ -233,7 +248,9 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
         .where(
           (image) =>
               !_persistedHistoryFilePaths.containsKey(image.id) ||
-              _persistedHistoryFilePaths[image.id] != image.filePath,
+              _persistedHistoryFilePaths[image.id] != image.filePath ||
+              !_persistedHistoryRecipeIds.containsKey(image.id) ||
+              _persistedHistoryRecipeIds[image.id] != image.recipeId,
         )
         .toList();
     final historyIds = state.history.map((image) => image.id).toSet();
@@ -251,6 +268,11 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
               ..removeWhere((id, _) => !historyIds.contains(id))
               ..addEntries(
                 changed.map((image) => MapEntry(image.id, image.filePath)),
+              );
+            _persistedHistoryRecipeIds
+              ..removeWhere((id, _) => !historyIds.contains(id))
+              ..addEntries(
+                changed.map((image) => MapEntry(image.id, image.recipeId)),
               );
           })
           .catchError((Object _) {}),
@@ -390,6 +412,8 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
         _activeInvocationId = 0;
         _generationInvocationStarting = false;
         _activeComparisonSource = null;
+        _activeRecipeParams = null;
+        _activeRecipeCharacters = const [];
       }
       if (!invocationSettled.isCompleted) {
         invocationSettled.complete();
@@ -488,6 +512,8 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
                 params.action != ImageGenerationAction.generate
             ? _comparisonSourceFor(sourceImage)
             : null;
+        _activeRecipeParams = params;
+        _activeRecipeCharacters = _recipeCharactersSnapshot();
         state = state.copyWith(
           currentImages: [],
           status: GenerationStatus.generating,
@@ -610,9 +636,36 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
           );
         }
       case GenerationCompleted(:final params):
-        final images = List<GeneratedImage>.from(state.currentImages);
+        var images = List<GeneratedImage>.from(state.currentImages);
+        final lifecycle = _lifecycle();
+        final recipe = await lifecycle.saveRecipe(
+          params: _activeRecipeParams ?? params,
+          characters: _activeRecipeCharacters,
+        );
+        if (recipe != null) {
+          images = [
+            for (final image in images) image.copyWithRecipeId(recipe.id),
+          ];
+        }
+        final linkedIds = {for (final image in images) image.id};
+        final linkedCurrentImages = state.currentImages
+            .map(
+              (image) => linkedIds.contains(image.id)
+                  ? image.copyWithRecipeId(recipe?.id)
+                  : image,
+            )
+            .toList();
+        final linkedHistory = state.history
+            .map(
+              (image) => linkedIds.contains(image.id)
+                  ? image.copyWithRecipeId(recipe?.id)
+                  : image,
+            )
+            .toList();
         _activeComparisonSource = null;
         state = state.copyWith(
+          currentImages: linkedCurrentImages,
+          history: linkedHistory,
           status: GenerationStatus.completed,
           displayImages: images,
           displayWidth: images.isEmpty ? params.width : images.first.width,
@@ -622,8 +675,8 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
           totalImages: 0,
           clearStreamPreview: true,
         );
+        if (recipe != null) _retainHistoryCaches();
         if (images.isNotEmpty) {
-          final lifecycle = _lifecycle();
           final settings = ref.read(imageSaveSettingsNotifierProvider);
           if (settings.autoSave) {
             await _saveImages(images, params, epoch: epoch);
@@ -1016,6 +1069,28 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
           .getEffectiveContent(params.model),
       useCustomUcPreset: uc.isCustom,
     );
+  }
+
+  /// Captures the reusable character identity alongside the wire-format
+  /// request. The API conversion may normalize aliases, so recipes retain
+  /// the editor's original character ids and positions for later reuse.
+  List<RecipeCharacter> _recipeCharactersSnapshot() {
+    final config = ref.read(characterPromptNotifierProvider);
+    return List.unmodifiable([
+      for (final character in config.characters)
+        RecipeCharacter(
+          id: character.id,
+          name: character.name,
+          gender: character.gender.name,
+          prompt: character.prompt,
+          negativePrompt: character.negativePrompt,
+          enabled: character.enabled,
+          center: () {
+            final position = config.resolvePosition(character);
+            return RecipeCharacterCenter(x: position.column, y: position.row);
+          }(),
+        ),
+    ]);
   }
 
   List<CharacterPrompt> _convertCharactersToApiFormat(

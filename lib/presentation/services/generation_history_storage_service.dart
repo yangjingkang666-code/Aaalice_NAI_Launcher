@@ -161,6 +161,7 @@ class GenerationHistoryStorageService {
           : jsonEncode(image.metadata!.toJson()),
       'preserveOriginalBytesOnSave': image.preserveOriginalBytesOnSave,
       'filePath': image.filePath,
+      'recipeId': image.recipeId,
     };
   }
 
@@ -211,6 +212,7 @@ class GenerationHistoryStorageService {
       preserveOriginalBytesOnSave:
           raw['preserveOriginalBytesOnSave'] as bool? ?? false,
       filePath: raw['filePath'] as String?,
+      recipeId: raw['recipeId'] as String?,
     );
   }
 }

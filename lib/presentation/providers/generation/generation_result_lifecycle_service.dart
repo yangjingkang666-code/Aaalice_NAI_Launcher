@@ -6,6 +6,7 @@ import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/image_save_utils.dart';
 import '../../../core/utils/nai_resolution_adapter.dart';
 import '../../../data/models/image/image_params.dart';
+import '../../../data/models/recipe/prompt_recipe.dart';
 import '../../../data/services/image_metadata_service.dart';
 import '../../services/generation_history_storage_service.dart';
 import 'generation_models.dart';
@@ -17,6 +18,7 @@ class GenerationResultLifecycleDependencies {
     required this.addGalleryImages,
     required this.refreshGallery,
     required this.incrementStatistics,
+    this.recipeRepository,
   });
 
   final GenerationHistoryStorageService historyStorage;
@@ -24,6 +26,7 @@ class GenerationResultLifecycleDependencies {
   final Future<int> Function(List<String> paths) addGalleryImages;
   final Future<void> Function() refreshGallery;
   final Future<void> Function(int count) incrementStatistics;
+  final PromptRecipeRepository? recipeRepository;
 }
 
 class GenerationSaveSnapshot {
@@ -80,6 +83,39 @@ class GenerationResultLifecycleService {
   );
 
   Future<void> flushHistory() => dependencies.historyStorage.flush();
+
+  /// Persists the confirmed generation settings as a recipe.
+  ///
+  /// Recipe persistence is optional so isolated provider containers and
+  /// preview-only callers can keep their existing in-memory behavior. The
+  /// production container enables it alongside generation history.
+  Future<PromptRecipe?> saveRecipe({
+    required ImageParams params,
+    List<RecipeCharacter> characters = const [],
+    String? parentRecipeId,
+    String? sourceGalleryItemId,
+    String? provider,
+    String? providerModel,
+  }) async {
+    final repository = dependencies.recipeRepository;
+    if (repository == null) return null;
+
+    final recipe = PromptRecipe.create(
+      params: params,
+      characters: characters,
+      parentRecipeId: parentRecipeId,
+      sourceGalleryItemId: sourceGalleryItemId,
+      provider: provider,
+      providerModel: providerModel,
+    );
+    try {
+      await repository.save(recipe);
+      return recipe;
+    } catch (error, stackTrace) {
+      AppLogger.e('保存生成配方失败', error, stackTrace, 'PromptRecipe');
+      return null;
+    }
+  }
 
   List<GeneratedImage> mergeHistory(
     List<GeneratedImage> current,

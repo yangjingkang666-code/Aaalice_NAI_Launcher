@@ -37,6 +37,7 @@ void main() {
       height: 96,
       createdAt: DateTime.utc(2026, 8, 26, 12, byte),
       filePath: '/images/$id.png',
+      recipeId: 'recipe-$id',
       preserveOriginalBytesOnSave: true,
     );
   }
@@ -61,6 +62,7 @@ void main() {
       expect(restored.first.height, second.height);
       expect(restored.first.createdAt, second.createdAt);
       expect(restored.first.filePath, second.filePath);
+      expect(restored.first.recipeId, second.recipeId);
       expect(restored.first.preserveOriginalBytesOnSave, isTrue);
     },
   );
