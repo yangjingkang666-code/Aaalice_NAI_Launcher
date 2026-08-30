@@ -6512,5 +6512,9 @@
   "@agentSettings_missingModel": {"placeholders":{"model":{"type":"String"}}},
   "agentSettings_missingSkill": "Skill not currently available: {skill}",
   "@agentSettings_missingSkill": {"placeholders":{"skill":{"type":"String"}}},
-  "agentSettings_profileImported": "Agent profile imported"
+  "agentSettings_profileImported": "Agent profile imported",
+  "promptRecipe_load": "Load recipe",
+  "promptRecipe_loaded": "Generation recipe loaded",
+  "promptRecipe_missingAssets": "Recipe loaded; source and reference images need to be reattached before use.",
+  "promptRecipe_notFound": "This generation recipe is no longer available"
 }

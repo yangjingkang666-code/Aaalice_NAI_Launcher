@@ -205,6 +205,16 @@ void main() {
     expect(find.text('精准参考'), findsOneWidget);
   });
 
+  testWidgets('context menu should expose the prompt recipe action', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_buildCardApp(onApplyRecipe: _noop));
+
+    await _openImageContextMenu(tester);
+
+    expect(find.text('加载配方'), findsOneWidget);
+  });
+
   testWidgets(
     'generation preview hover exposes history destination shortcuts',
     (tester) async {
@@ -637,6 +647,7 @@ Widget _buildCardApp({
   VoidCallback? onImageToImage,
   VoidCallback? onVibeTransfer,
   VoidCallback? onPreciseReference,
+  VoidCallback? onApplyRecipe,
   GlobalKey<NavigatorState>? navigatorKey,
 }) {
   final bytes = Uint8List.fromList(
@@ -669,6 +680,7 @@ Widget _buildCardApp({
               onImageToImage: onImageToImage,
               onVibeTransfer: onVibeTransfer,
               onPreciseReference: onPreciseReference,
+              onApplyRecipe: onApplyRecipe,
             ),
           ),
         ),

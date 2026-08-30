@@ -83,6 +83,7 @@ class ImageCardCapabilities {
     required this.onDirectorTools,
     required this.onEnhance,
     required this.onSendToKrita,
+    required this.onApplyRecipe,
     required this.onShareToDiscord,
     required this.onOpenInExplorer,
     required this.onSaveToLibrary,
@@ -116,6 +117,7 @@ class ImageCardCapabilities {
   final VoidCallback? onDirectorTools;
   final VoidCallback? onEnhance;
   final VoidCallback? onSendToKrita;
+  final VoidCallback? onApplyRecipe;
   final VoidCallback? onShareToDiscord;
   final VoidCallback? onOpenInExplorer;
   final void Function(Uint8List imageBytes, String prompt)? onSaveToLibrary;

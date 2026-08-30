@@ -297,6 +297,19 @@ class GenerationParamsNotifier extends _$GenerationParamsNotifier {
     _scheduleGenerationStateSave(immediate: true);
   }
 
+  /// Applies a binary-free recipe snapshot without allowing missing assets to
+  /// leak into the next request.
+  void applyRestoredParams(ImageParams params) {
+    state = params.copyWith(
+      sourceImage: null,
+      maskImage: null,
+      vibeReferencesV4: const [],
+      preciseReferences: const [],
+      characters: const [],
+    );
+    _scheduleGenerationStateSave(immediate: true);
+  }
+
   // ==================== 生成动作 ====================
 
   /// 更新生成动作

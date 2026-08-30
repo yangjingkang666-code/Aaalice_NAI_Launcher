@@ -43,6 +43,7 @@ enum ImageCardActionId {
   enhance,
   upscale,
   sendToKrita,
+  applyRecipe,
 }
 
 @immutable
@@ -195,6 +196,14 @@ class ImageCardActionCatalog {
       l10n.drop_saveToPreciseRefLibrary,
       capabilities.onSaveToPreciseRefLibrary,
       group: 3,
+    );
+    add(
+      ImageCardActionId.applyRecipe,
+      Icons.auto_awesome_motion_outlined,
+      l10n.promptRecipe_load,
+      capabilities.onApplyRecipe,
+      group: 3,
+      hover: false,
     );
     add(
       ImageCardActionId.editImage,

@@ -13768,4 +13768,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get agentSettings_profileImported => 'Agent profile imported';
+
+  @override
+  String get promptRecipe_load => 'Load recipe';
+
+  @override
+  String get promptRecipe_loaded => 'Generation recipe loaded';
+
+  @override
+  String get promptRecipe_missingAssets =>
+      'Recipe loaded; source and reference images need to be reattached before use.';
+
+  @override
+  String get promptRecipe_notFound =>
+      'This generation recipe is no longer available';
 }

@@ -6581,5 +6581,9 @@
   "@agentSettings_missingModel": {"placeholders":{"model":{"type":"String"}}},
   "agentSettings_missingSkill": "当前未安装 Skill：{skill}",
   "@agentSettings_missingSkill": {"placeholders":{"skill":{"type":"String"}}},
-  "agentSettings_profileImported": "智能体配置已导入"
+  "agentSettings_profileImported": "智能体配置已导入",
+  "promptRecipe_load": "加载配方",
+  "promptRecipe_loaded": "生成配方已加载",
+  "promptRecipe_missingAssets": "配方已加载；源图、Vibe 或精准参考需要重新添加后才能使用。",
+  "promptRecipe_notFound": "这个生成配方已不可用"
 }

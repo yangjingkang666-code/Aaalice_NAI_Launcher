@@ -55,6 +55,7 @@ class SelectableImageCard extends ConsumerStatefulWidget {
     this.onDirectorTools,
     this.onEnhance,
     this.onSendToKrita,
+    this.onApplyRecipe,
     this.onShareToDiscord,
     this.onOpenInExplorer,
     this.sourceFilePath,
@@ -113,6 +114,7 @@ class SelectableImageCard extends ConsumerStatefulWidget {
   final VoidCallback? onDirectorTools;
   final VoidCallback? onEnhance;
   final VoidCallback? onSendToKrita;
+  final VoidCallback? onApplyRecipe;
   final VoidCallback? onShareToDiscord;
   final VoidCallback? onOpenInExplorer;
   final String? sourceFilePath;
@@ -191,6 +193,7 @@ class _SelectableImageCardState extends ConsumerState<SelectableImageCard>
     onDirectorTools: widget.onDirectorTools,
     onEnhance: widget.onEnhance,
     onSendToKrita: widget.onSendToKrita,
+    onApplyRecipe: widget.onApplyRecipe,
     onShareToDiscord: widget.onShareToDiscord,
     onOpenInExplorer: widget.onOpenInExplorer,
     onSaveToLibrary: widget.onSaveToLibrary,

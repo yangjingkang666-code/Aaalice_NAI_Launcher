@@ -23977,6 +23977,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Agent profile imported'**
   String get agentSettings_profileImported;
+
+  /// No description provided for @promptRecipe_load.
+  ///
+  /// In en, this message translates to:
+  /// **'Load recipe'**
+  String get promptRecipe_load;
+
+  /// No description provided for @promptRecipe_loaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation recipe loaded'**
+  String get promptRecipe_loaded;
+
+  /// No description provided for @promptRecipe_missingAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'Recipe loaded; source and reference images need to be reattached before use.'**
+  String get promptRecipe_missingAssets;
+
+  /// No description provided for @promptRecipe_notFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This generation recipe is no longer available'**
+  String get promptRecipe_notFound;
 }
 
 class _AppLocalizationsDelegate

@@ -33,6 +33,7 @@ import '../../../providers/local_gallery_provider.dart';
 import '../../../providers/reverse_prompt_provider.dart';
 import '../../../providers/share_image_settings_provider.dart';
 import '../../../services/image_workflow_launcher.dart';
+import '../../../services/prompt_recipe_application_service.dart';
 import '../../../widgets/common/app_toast.dart';
 import '../../../widgets/common/image_detail/file_image_detail_data.dart';
 import '../../../widgets/common/image_detail/image_detail_data.dart';
@@ -951,6 +952,11 @@ class _HistoryPanelState extends ConsumerState<HistoryPanel> {
                                 ? (bytes, _) =>
                                       _showSaveToLibraryDialog(context, bytes)
                                 : null,
+                            onApplyRecipe: historyImage.recipeId == null
+                                ? null
+                                : () => unawaited(
+                                    _applyPromptRecipe(context, historyImage),
+                                  ),
                           ),
                     ),
                   ),
@@ -1142,6 +1148,9 @@ class _HistoryPanelState extends ConsumerState<HistoryPanel> {
           onSaveToLibrary: image.canUseAsGenerationInput
               ? (bytes, _) => _showSaveToLibraryDialog(context, bytes)
               : null,
+          onApplyRecipe: image.recipeId == null
+              ? null
+              : () => unawaited(_applyPromptRecipe(context, image)),
         ),
       );
     }
@@ -1271,6 +1280,31 @@ class _HistoryPanelState extends ConsumerState<HistoryPanel> {
       return;
     }
     _showLinkedDetail(context, image);
+  }
+
+  Future<void> _applyPromptRecipe(
+    BuildContext context,
+    GeneratedImage image,
+  ) async {
+    final recipeId = image.recipeId;
+    if (recipeId == null || recipeId.isEmpty) return;
+    final l10n = context.l10n;
+    try {
+      final restored = await ref
+          .read(promptRecipeApplicationServiceProvider)
+          .apply(recipeId);
+      if (!context.mounted) return;
+      if (restored == null) {
+        AppToast.warning(context, l10n.promptRecipe_notFound);
+        return;
+      }
+      AppToast.success(context, l10n.promptRecipe_loaded);
+      if (restored.hasUnavailableReferences) {
+        AppToast.warning(context, l10n.promptRecipe_missingAssets);
+      }
+    } catch (error) {
+      if (context.mounted) AppToast.error(context, error.toString());
+    }
   }
 
   bool _favoriteStateFor(GeneratedImage image) {

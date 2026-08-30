@@ -13430,4 +13430,17 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get agentSettings_profileImported => 'エージェント設定をインポートしました';
+
+  @override
+  String get promptRecipe_load => 'レシピを読み込む';
+
+  @override
+  String get promptRecipe_loaded => '生成レシピを読み込みました';
+
+  @override
+  String get promptRecipe_missingAssets =>
+      'レシピを読み込みました。使用するには元画像と参照画像を再添付してください。';
+
+  @override
+  String get promptRecipe_notFound => 'この生成レシピは利用できません';
 }

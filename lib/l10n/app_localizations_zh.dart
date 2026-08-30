@@ -13197,6 +13197,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentSettings_profileImported => '智能体配置已导入';
+
+  @override
+  String get promptRecipe_load => '加载配方';
+
+  @override
+  String get promptRecipe_loaded => '生成配方已加载';
+
+  @override
+  String get promptRecipe_missingAssets => '配方已加载；源图、Vibe 或精准参考需要重新添加后才能使用。';
+
+  @override
+  String get promptRecipe_notFound => '这个生成配方已不可用';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -26393,4 +26405,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentSettings_profileImported => '智慧體設定已匯入';
+
+  @override
+  String get promptRecipe_load => '載入配方';
+
+  @override
+  String get promptRecipe_loaded => '生成配方已載入';
+
+  @override
+  String get promptRecipe_missingAssets => '配方已載入；來源圖、Vibe 或精準參考需要重新加入後才能使用。';
+
+  @override
+  String get promptRecipe_notFound => '這個生成配方已無法使用';
 }

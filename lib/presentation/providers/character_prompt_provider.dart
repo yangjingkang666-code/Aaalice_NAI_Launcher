@@ -259,9 +259,22 @@ class CharacterPromptNotifier extends _$CharacterPromptNotifier {
   ///
   /// 用于随机生成时一次性设置所有角色
   void replaceAll(List<CharacterPrompt> characters) {
+    _replaceAll(characters);
+  }
+
+  /// Replaces all characters while also restoring the placement mode captured
+  /// by a prompt recipe.
+  void replaceAllWithGlobalAiChoice(
+    List<CharacterPrompt> characters, {
+    required bool globalAiChoice,
+  }) {
+    _replaceAll(characters, globalAiChoice: globalAiChoice);
+  }
+
+  void _replaceAll(List<CharacterPrompt> characters, {bool? globalAiChoice}) {
     final requested = CharacterPromptConfig(
       characters: characters,
-      globalAiChoice: state.globalAiChoice,
+      globalAiChoice: globalAiChoice ?? state.globalAiChoice,
     );
     final model = ref.read(generationParamsNotifierProvider).model;
     state = limitCharacterConfigForModel(requested, model);
