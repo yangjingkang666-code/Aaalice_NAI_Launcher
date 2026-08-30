@@ -13199,6 +13199,48 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentSettings_profileImported => '智能体配置已导入';
 
   @override
+  String get promptPatch_open => 'Prompt Patch';
+
+  @override
+  String get promptPatch_title => 'Prompt Patch 工作台';
+
+  @override
+  String get promptPatch_addOperation => '添加操作';
+
+  @override
+  String get promptPatch_empty => '还没有操作。添加一行来构建安全补丁。';
+
+  @override
+  String get promptPatch_operation => '操作';
+
+  @override
+  String get promptPatch_target => '目标';
+
+  @override
+  String get promptPatch_before => '修改前';
+
+  @override
+  String get promptPatch_after => '修改后';
+
+  @override
+  String get promptPatch_reason => '原因';
+
+  @override
+  String get promptPatch_explicit => '用户明确要求';
+
+  @override
+  String get promptPatch_apply => '应用补丁';
+
+  @override
+  String get promptPatch_validation => '补丁校验';
+
+  @override
+  String get promptPatch_applied => 'Prompt Patch 已应用并创建新的配方分支';
+
+  @override
+  String get promptPatch_protectedHint => '默认保护角色身份、姿势、风格、生成参数和二进制参考素材。';
+
+  @override
   String get promptRecipe_load => '加载配方';
 
   @override
@@ -26405,6 +26447,48 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentSettings_profileImported => '智慧體設定已匯入';
+
+  @override
+  String get promptPatch_open => 'Prompt Patch';
+
+  @override
+  String get promptPatch_title => 'Prompt Patch 工作台';
+
+  @override
+  String get promptPatch_addOperation => '新增操作';
+
+  @override
+  String get promptPatch_empty => '還沒有操作。新增一列來建立安全補丁。';
+
+  @override
+  String get promptPatch_operation => '操作';
+
+  @override
+  String get promptPatch_target => '目標';
+
+  @override
+  String get promptPatch_before => '修改前';
+
+  @override
+  String get promptPatch_after => '修改後';
+
+  @override
+  String get promptPatch_reason => '原因';
+
+  @override
+  String get promptPatch_explicit => '使用者明確要求';
+
+  @override
+  String get promptPatch_apply => '套用補丁';
+
+  @override
+  String get promptPatch_validation => '補丁驗證';
+
+  @override
+  String get promptPatch_applied => 'Prompt Patch 已套用並建立新的配方分支';
+
+  @override
+  String get promptPatch_protectedHint => '預設保護角色身分、姿勢、風格、生成參數和二進位參考素材。';
 
   @override
   String get promptRecipe_load => '載入配方';

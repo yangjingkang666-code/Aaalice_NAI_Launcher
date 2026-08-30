@@ -44,6 +44,7 @@ enum ImageCardActionId {
   upscale,
   sendToKrita,
   applyRecipe,
+  promptPatch,
 }
 
 @immutable
@@ -202,6 +203,14 @@ class ImageCardActionCatalog {
       Icons.auto_awesome_motion_outlined,
       l10n.promptRecipe_load,
       capabilities.onApplyRecipe,
+      group: 3,
+      hover: false,
+    );
+    add(
+      ImageCardActionId.promptPatch,
+      Icons.edit_note_rounded,
+      l10n.promptPatch_open,
+      capabilities.onPromptPatch,
       group: 3,
       hover: false,
     );

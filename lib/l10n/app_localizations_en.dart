@@ -13770,6 +13770,51 @@ class AppLocalizationsEn extends AppLocalizations {
   String get agentSettings_profileImported => 'Agent profile imported';
 
   @override
+  String get promptPatch_open => 'Prompt Patch';
+
+  @override
+  String get promptPatch_title => 'Prompt Patch workbench';
+
+  @override
+  String get promptPatch_addOperation => 'Add operation';
+
+  @override
+  String get promptPatch_empty =>
+      'No operations yet. Add a row to build a safe patch.';
+
+  @override
+  String get promptPatch_operation => 'Operation';
+
+  @override
+  String get promptPatch_target => 'Target';
+
+  @override
+  String get promptPatch_before => 'Before';
+
+  @override
+  String get promptPatch_after => 'After';
+
+  @override
+  String get promptPatch_reason => 'Reason';
+
+  @override
+  String get promptPatch_explicit => 'Explicitly requested';
+
+  @override
+  String get promptPatch_apply => 'Apply patch';
+
+  @override
+  String get promptPatch_validation => 'Patch validation';
+
+  @override
+  String get promptPatch_applied =>
+      'Prompt Patch applied as a new recipe branch';
+
+  @override
+  String get promptPatch_protectedHint =>
+      'Identity, pose, style, parameters, and binary references stay protected by default.';
+
+  @override
   String get promptRecipe_load => 'Load recipe';
 
   @override

@@ -215,6 +215,16 @@ void main() {
     expect(find.text('加载配方'), findsOneWidget);
   });
 
+  testWidgets('context menu should expose the prompt patch workbench action', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_buildCardApp(onPromptPatch: _noop));
+
+    await _openImageContextMenu(tester);
+
+    expect(find.text('Prompt Patch'), findsOneWidget);
+  });
+
   testWidgets(
     'generation preview hover exposes history destination shortcuts',
     (tester) async {
@@ -648,6 +658,7 @@ Widget _buildCardApp({
   VoidCallback? onVibeTransfer,
   VoidCallback? onPreciseReference,
   VoidCallback? onApplyRecipe,
+  VoidCallback? onPromptPatch,
   GlobalKey<NavigatorState>? navigatorKey,
 }) {
   final bytes = Uint8List.fromList(
@@ -681,6 +692,7 @@ Widget _buildCardApp({
               onVibeTransfer: onVibeTransfer,
               onPreciseReference: onPreciseReference,
               onApplyRecipe: onApplyRecipe,
+              onPromptPatch: onPromptPatch,
             ),
           ),
         ),

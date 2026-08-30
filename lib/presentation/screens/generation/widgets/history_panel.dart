@@ -20,6 +20,7 @@ import '../../../../core/utils/keyboard_modifier_utils.dart';
 import '../../../../core/utils/vibe_file_parser.dart';
 import '../../../../core/utils/zip_utils.dart';
 import '../../../../data/services/alias_resolver_service.dart';
+import '../../../../data/repositories/prompt_recipe_repository.dart';
 import '../../../providers/layout_state_provider.dart';
 import '../../../providers/tag_library_page_provider.dart';
 
@@ -34,6 +35,7 @@ import '../../../providers/reverse_prompt_provider.dart';
 import '../../../providers/share_image_settings_provider.dart';
 import '../../../services/image_workflow_launcher.dart';
 import '../../../services/prompt_recipe_application_service.dart';
+import '../../../services/prompt_recipe_restoration_service.dart';
 import '../../../widgets/common/app_toast.dart';
 import '../../../widgets/common/image_detail/file_image_detail_data.dart';
 import '../../../widgets/common/image_detail/image_detail_data.dart';
@@ -48,6 +50,7 @@ import '../../../widgets/common/themed_confirm_dialog.dart';
 import '../services/generation_save_service.dart';
 import '../../../widgets/common/themed_divider.dart';
 import '../../tag_library_page/widgets/entry_add_dialog.dart';
+import 'prompt_patch_workbench_dialog.dart';
 
 double resolveHistoryPreviewAspectRatio(
   double aspectRatio, {
@@ -957,6 +960,11 @@ class _HistoryPanelState extends ConsumerState<HistoryPanel> {
                                 : () => unawaited(
                                     _applyPromptRecipe(context, historyImage),
                                   ),
+                            onPromptPatch: historyImage.recipeId == null
+                                ? null
+                                : () => unawaited(
+                                    _openPromptPatch(context, historyImage),
+                                  ),
                           ),
                     ),
                   ),
@@ -1151,6 +1159,9 @@ class _HistoryPanelState extends ConsumerState<HistoryPanel> {
           onApplyRecipe: image.recipeId == null
               ? null
               : () => unawaited(_applyPromptRecipe(context, image)),
+          onPromptPatch: image.recipeId == null
+              ? null
+              : () => unawaited(_openPromptPatch(context, image)),
         ),
       );
     }
@@ -1304,6 +1315,29 @@ class _HistoryPanelState extends ConsumerState<HistoryPanel> {
       }
     } catch (error) {
       if (context.mounted) AppToast.error(context, error.toString());
+    }
+  }
+
+  Future<void> _openPromptPatch(
+    BuildContext context,
+    GeneratedImage image,
+  ) async {
+    final recipeId = image.recipeId;
+    if (recipeId == null || recipeId.isEmpty) return;
+    final repository = ref.read(promptRecipeRepositoryProvider);
+    final recipe = await repository.get(recipeId);
+    if (!context.mounted) return;
+    if (recipe == null) {
+      AppToast.warning(context, context.l10n.promptRecipe_notFound);
+      return;
+    }
+    final applied = await PromptPatchWorkbenchDialog.show(context, recipe);
+    if (!context.mounted || applied == null) return;
+    AppToast.success(context, context.l10n.promptPatch_applied);
+    if (PromptRecipeRestorationService.restore(
+      applied.recipe,
+    ).hasUnavailableReferences) {
+      AppToast.warning(context, context.l10n.promptRecipe_missingAssets);
     }
   }
 

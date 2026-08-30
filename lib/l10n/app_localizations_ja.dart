@@ -13432,6 +13432,49 @@ class AppLocalizationsJa extends AppLocalizations {
   String get agentSettings_profileImported => 'エージェント設定をインポートしました';
 
   @override
+  String get promptPatch_open => 'Prompt Patch';
+
+  @override
+  String get promptPatch_title => 'Prompt Patch ワークベンチ';
+
+  @override
+  String get promptPatch_addOperation => '操作を追加';
+
+  @override
+  String get promptPatch_empty => 'まだ操作がありません。行を追加して安全なパッチを作成してください。';
+
+  @override
+  String get promptPatch_operation => '操作';
+
+  @override
+  String get promptPatch_target => '対象';
+
+  @override
+  String get promptPatch_before => '変更前';
+
+  @override
+  String get promptPatch_after => '変更後';
+
+  @override
+  String get promptPatch_reason => '理由';
+
+  @override
+  String get promptPatch_explicit => 'ユーザーが明示的に要求';
+
+  @override
+  String get promptPatch_apply => 'パッチを適用';
+
+  @override
+  String get promptPatch_validation => 'パッチ検証';
+
+  @override
+  String get promptPatch_applied => 'Prompt Patch を適用し、新しいレシピ分岐を作成しました';
+
+  @override
+  String get promptPatch_protectedHint =>
+      '身元、ポーズ、スタイル、生成パラメータ、バイナリ参照は既定で保護されます。';
+
+  @override
   String get promptRecipe_load => 'レシピを読み込む';
 
   @override

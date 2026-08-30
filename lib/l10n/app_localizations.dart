@@ -23978,6 +23978,90 @@ abstract class AppLocalizations {
   /// **'Agent profile imported'**
   String get agentSettings_profileImported;
 
+  /// No description provided for @promptPatch_open.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt Patch'**
+  String get promptPatch_open;
+
+  /// No description provided for @promptPatch_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt Patch workbench'**
+  String get promptPatch_title;
+
+  /// No description provided for @promptPatch_addOperation.
+  ///
+  /// In en, this message translates to:
+  /// **'Add operation'**
+  String get promptPatch_addOperation;
+
+  /// No description provided for @promptPatch_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No operations yet. Add a row to build a safe patch.'**
+  String get promptPatch_empty;
+
+  /// No description provided for @promptPatch_operation.
+  ///
+  /// In en, this message translates to:
+  /// **'Operation'**
+  String get promptPatch_operation;
+
+  /// No description provided for @promptPatch_target.
+  ///
+  /// In en, this message translates to:
+  /// **'Target'**
+  String get promptPatch_target;
+
+  /// No description provided for @promptPatch_before.
+  ///
+  /// In en, this message translates to:
+  /// **'Before'**
+  String get promptPatch_before;
+
+  /// No description provided for @promptPatch_after.
+  ///
+  /// In en, this message translates to:
+  /// **'After'**
+  String get promptPatch_after;
+
+  /// No description provided for @promptPatch_reason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get promptPatch_reason;
+
+  /// No description provided for @promptPatch_explicit.
+  ///
+  /// In en, this message translates to:
+  /// **'Explicitly requested'**
+  String get promptPatch_explicit;
+
+  /// No description provided for @promptPatch_apply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply patch'**
+  String get promptPatch_apply;
+
+  /// No description provided for @promptPatch_validation.
+  ///
+  /// In en, this message translates to:
+  /// **'Patch validation'**
+  String get promptPatch_validation;
+
+  /// No description provided for @promptPatch_applied.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt Patch applied as a new recipe branch'**
+  String get promptPatch_applied;
+
+  /// No description provided for @promptPatch_protectedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity, pose, style, parameters, and binary references stay protected by default.'**
+  String get promptPatch_protectedHint;
+
   /// No description provided for @promptRecipe_load.
   ///
   /// In en, this message translates to:
