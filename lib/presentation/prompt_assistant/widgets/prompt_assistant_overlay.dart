@@ -72,7 +72,40 @@ class _PromptAssistantOverlayState
   @override
   void dispose() {
     ++_operationGeneration;
-    _streamSub?.cancel();
+    final subscription = _streamSub;
+    _streamSub = null;
+    PromptAssistantService? service;
+    var wasProcessing = false;
+    try {
+      final stateNotifier = ref.read(promptAssistantStateProvider.notifier);
+      wasProcessing = stateNotifier.getState(widget.sessionId).processing;
+      if (wasProcessing) {
+        // Invalidate the generation synchronously so a late stream callback
+        // cannot update a controller after this overlay has been removed.
+        stateNotifier.cancelProcessing(widget.sessionId);
+      }
+      if (subscription != null || wasProcessing) {
+        service = ref.read(promptAssistantServiceProvider);
+      }
+    } catch (_) {
+      // Disposal must remain best-effort when the owning ProviderScope is
+      // already tearing down.
+    }
+    unawaited(() async {
+      try {
+        await subscription?.cancel();
+      } catch (_) {
+        // Stream cancellation is best-effort during widget disposal.
+      }
+      if (service != null) {
+        try {
+          await service.cancelCurrentTask(sessionId: widget.sessionId);
+        } catch (_) {
+          // The request may already have completed or its provider may be
+          // gone; either way there is no live UI left to update.
+        }
+      }
+    }());
     super.dispose();
   }
 

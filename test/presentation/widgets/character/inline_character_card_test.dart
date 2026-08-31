@@ -38,6 +38,12 @@ void main() {
     await Hive.box(
       StorageKeys.settingsBox,
     ).put(StorageKeys.enableAutocomplete, false);
+    // Keep focus-transition tests free of the formatting toast's pending
+    // three-second timer; formatting itself is covered by UnifiedPromptInput
+    // tests and is unrelated to card selection.
+    await Hive.box(
+      StorageKeys.settingsBox,
+    ).put(StorageKeys.autoFormatPrompt, false);
   });
 
   const character = CharacterPrompt(
@@ -65,6 +71,7 @@ void main() {
 
   group('InlineCharacterCard', () {
     testWidgets('未选中时显示名字与提示词只读预览', (tester) async {
+      _disposeWidgetTree(tester);
       await tester.pumpWidget(buildTestApp());
       await tester.pumpAndSettle();
 
@@ -77,6 +84,7 @@ void main() {
     });
 
     testWidgets('点击预览区选中角色进入编辑态', (tester) async {
+      _disposeWidgetTree(tester);
       late WidgetRef capturedRef;
       await tester.pumpWidget(
         ProviderScope(
@@ -122,6 +130,7 @@ void main() {
     });
 
     testWidgets('子对话框内点击不会退出角色编辑态', (tester) async {
+      _disposeWidgetTree(tester);
       late WidgetRef capturedRef;
       late BuildContext pageContext;
       await tester.pumpWidget(
@@ -185,10 +194,14 @@ void main() {
     });
 
     testWidgets('禁用的角色整卡半透明', (tester) async {
+      _disposeWidgetTree(tester);
       await tester.pumpWidget(
         buildTestApp(target: character.copyWith(enabled: false)),
       );
-      await tester.pumpAndSettle();
+      // AnimatedOpacity is the only transition under test here. A bounded
+      // pump avoids waiting on assistant/provider tickers left by the prior
+      // dialog test while still advancing past the card's 180 ms duration.
+      await tester.pump(const Duration(milliseconds: 250));
 
       final opacityWidget = tester.widget<AnimatedOpacity>(
         find.byType(AnimatedOpacity).first,
@@ -197,6 +210,7 @@ void main() {
     });
 
     testWidgets('窄屏三点菜单完整显示所有操作且不 overflow', (tester) async {
+      _disposeWidgetTree(tester);
       await tester.binding.setSurfaceSize(const Size(360, 800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(buildTestApp());
@@ -216,6 +230,7 @@ void main() {
     });
 
     testWidgets('添加到词库时将角色独立 UC 编码为 negative 块', (tester) async {
+      _disposeWidgetTree(tester);
       const target = CharacterPrompt(
         id: 'char-negative',
         name: 'Alice',
@@ -238,5 +253,15 @@ void main() {
         findsOneWidget,
       );
     });
+  });
+}
+
+/// Dispose each widget tree before the next test starts. The character editor
+/// can launch an asynchronous assistant task, and leaving its overlay mounted
+/// keeps a ticker alive in the next test even after its own assertions finish.
+void _disposeWidgetTree(WidgetTester tester) {
+  addTearDown(() async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
   });
 }

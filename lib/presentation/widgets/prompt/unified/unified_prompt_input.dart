@@ -341,7 +341,40 @@ class _UnifiedPromptInputState extends ConsumerState<UnifiedPromptInput> {
 
   @override
   void dispose() {
-    _assistantStreamSub?.cancel();
+    final subscription = _assistantStreamSub;
+    _assistantStreamSub = null;
+    PromptAssistantService? service;
+    var wasProcessing = false;
+    try {
+      final stateNotifier = ref.read(promptAssistantStateProvider.notifier);
+      wasProcessing = stateNotifier.getState(_sessionId).processing;
+      if (wasProcessing) {
+        // Invalidate the generation before the async cancellation so a late
+        // response cannot write into a disposed editor controller.
+        stateNotifier.cancelProcessing(_sessionId);
+      }
+      if (subscription != null || wasProcessing) {
+        service = ref.read(promptAssistantServiceProvider);
+      }
+    } catch (_) {
+      // Disposal must stay safe when the surrounding ProviderScope is already
+      // being torn down.
+    }
+    unawaited(() async {
+      try {
+        await subscription?.cancel();
+      } catch (_) {
+        // Stream cancellation is best-effort during widget disposal.
+      }
+      if (service != null) {
+        try {
+          await service.cancelCurrentTask(sessionId: _sessionId);
+        } catch (_) {
+          // The request may already have completed or its provider may be
+          // gone; no editor remains to receive the result.
+        }
+      }
+    }());
     _searchController.removeListener(_onSearchQueryChanged);
     _clearSearchHighlights();
     HardwareKeyboard.instance.removeHandler(_handleHardwareKeyEvent);
