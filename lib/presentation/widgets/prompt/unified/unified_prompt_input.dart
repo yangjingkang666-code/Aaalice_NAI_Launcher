@@ -375,7 +375,10 @@ class _UnifiedPromptInputState extends ConsumerState<UnifiedPromptInput> {
     final label = taskType == AssistantTaskType.llm
         ? context.l10n.promptAssistant_optimizeProcessing
         : context.l10n.promptAssistant_translateProcessing;
-    stateNotifier.startProcessing(_sessionId, label);
+    final operationGeneration = stateNotifier.startProcessing(
+      _sessionId,
+      label,
+    );
 
     final service = ref.read(promptAssistantServiceProvider);
     final buffer = StringBuffer();
@@ -385,14 +388,29 @@ class _UnifiedPromptInputState extends ConsumerState<UnifiedPromptInput> {
         ? service.optimizePrompt(text, sessionId: _sessionId)
         : service.translatePrompt(text, sessionId: _sessionId);
 
+    if (!mounted || !stateNotifier.isCurrent(_sessionId, operationGeneration)) {
+      return;
+    }
     _assistantStreamSub = stream.listen(
       (chunk) {
+        if (!mounted ||
+            !stateNotifier.isCurrent(_sessionId, operationGeneration)) {
+          return;
+        }
         if (chunk.done) return;
         if (chunk.delta.isEmpty) return;
         buffer.write(chunk.delta);
       },
       onError: (e) {
-        stateNotifier.setError(_sessionId, e.toString());
+        if (!mounted ||
+            !stateNotifier.isCurrent(_sessionId, operationGeneration)) {
+          return;
+        }
+        stateNotifier.setError(
+          _sessionId,
+          e.toString(),
+          generation: operationGeneration,
+        );
         if (mounted) {
           AppToast.error(
             context,
@@ -401,6 +419,10 @@ class _UnifiedPromptInputState extends ConsumerState<UnifiedPromptInput> {
         }
       },
       onDone: () {
+        if (!mounted ||
+            !stateNotifier.isCurrent(_sessionId, operationGeneration)) {
+          return;
+        }
         if (buffer.isNotEmpty) {
           final finalText = buffer.toString();
           _effectiveController.text = finalText;
@@ -409,7 +431,10 @@ class _UnifiedPromptInputState extends ConsumerState<UnifiedPromptInput> {
           );
           widget.onChanged?.call(finalText);
         }
-        stateNotifier.finishProcessing(_sessionId);
+        stateNotifier.finishProcessing(
+          _sessionId,
+          generation: operationGeneration,
+        );
         final afterText = _effectiveController.text;
         ref
             .read(promptAssistantHistoryProvider.notifier)

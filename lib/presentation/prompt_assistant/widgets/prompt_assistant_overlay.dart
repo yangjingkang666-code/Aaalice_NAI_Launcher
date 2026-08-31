@@ -65,11 +65,13 @@ class PromptAssistantOverlay extends ConsumerStatefulWidget {
 class _PromptAssistantOverlayState
     extends ConsumerState<PromptAssistantOverlay> {
   StreamSubscription? _streamSub;
+  int _operationGeneration = 0;
 
   bool get _isDesktop => PlatformCapabilities.current.hasPrecisePointer;
 
   @override
   void dispose() {
+    ++_operationGeneration;
     _streamSub?.cancel();
     super.dispose();
   }
@@ -207,21 +209,34 @@ class _PromptAssistantOverlayState
         .push(widget.sessionId, beforeText);
 
     final stateNotifier = ref.read(promptAssistantStateProvider.notifier);
-    stateNotifier.startProcessing(widget.sessionId, label);
+    final operationGeneration = stateNotifier.startProcessing(
+      widget.sessionId,
+      label,
+    );
+    _operationGeneration = operationGeneration;
 
     final service = ref.read(promptAssistantServiceProvider);
     final buffer = StringBuffer();
 
     await _streamSub?.cancel();
+    if (!_isOperationActive(operationGeneration)) {
+      return;
+    }
     _streamSub = builder(service, text).listen(
       (chunk) {
+        if (!_isOperationActive(operationGeneration)) return;
         if (chunk.done == true) return;
         final delta = chunk.delta as String? ?? '';
         if (delta.isEmpty) return;
         buffer.write(delta);
       },
       onError: (e) {
-        stateNotifier.setError(widget.sessionId, e.toString());
+        if (!_isOperationActive(operationGeneration)) return;
+        stateNotifier.setError(
+          widget.sessionId,
+          e.toString(),
+          generation: operationGeneration,
+        );
         if (mounted) {
           AppToast.error(
             context,
@@ -230,10 +245,14 @@ class _PromptAssistantOverlayState
         }
       },
       onDone: () {
+        if (!_isOperationActive(operationGeneration)) return;
         if (buffer.isNotEmpty) {
           _replaceText(buffer.toString());
         }
-        stateNotifier.finishProcessing(widget.sessionId);
+        stateNotifier.finishProcessing(
+          widget.sessionId,
+          generation: operationGeneration,
+        );
         final afterText = widget.controller.text;
         ref
             .read(promptAssistantHistoryProvider.notifier)
@@ -260,15 +279,19 @@ class _PromptAssistantOverlayState
         .push(widget.sessionId, beforeText);
 
     final stateNotifier = ref.read(promptAssistantStateProvider.notifier);
-    stateNotifier.startProcessing(
+    final operationGeneration = stateNotifier.startProcessing(
       widget.sessionId,
       context.l10n.promptAssistant_customProcessing,
     );
+    _operationGeneration = operationGeneration;
 
     final service = ref.read(promptAssistantServiceProvider);
     final buffer = StringBuffer();
 
     await _streamSub?.cancel();
+    if (!_isOperationActive(operationGeneration)) {
+      return;
+    }
     _streamSub = service
         .customPrompt(
           inputText,
@@ -278,13 +301,19 @@ class _PromptAssistantOverlayState
         )
         .listen(
           (chunk) {
+            if (!_isOperationActive(operationGeneration)) return;
             if (chunk.done == true) return;
             final delta = chunk.delta as String? ?? '';
             if (delta.isEmpty) return;
             buffer.write(delta);
           },
           onError: (e) {
-            stateNotifier.setError(widget.sessionId, e.toString());
+            if (!_isOperationActive(operationGeneration)) return;
+            stateNotifier.setError(
+              widget.sessionId,
+              e.toString(),
+              generation: operationGeneration,
+            );
             if (mounted) {
               AppToast.error(
                 context,
@@ -293,10 +322,14 @@ class _PromptAssistantOverlayState
             }
           },
           onDone: () {
+            if (!_isOperationActive(operationGeneration)) return;
             if (buffer.isNotEmpty) {
               _replaceText(buffer.toString());
             }
-            stateNotifier.finishProcessing(widget.sessionId);
+            stateNotifier.finishProcessing(
+              widget.sessionId,
+              generation: operationGeneration,
+            );
             final afterText = widget.controller.text;
             ref
                 .read(promptAssistantHistoryProvider.notifier)
@@ -317,6 +350,34 @@ class _PromptAssistantOverlayState
     return ref
         .read(fixedTagsNotifierProvider)
         .stripFromPrompt(widget.controller.text);
+  }
+
+  bool _isOperationActive(int generation) =>
+      mounted &&
+      _operationGeneration == generation &&
+      ref
+          .read(promptAssistantStateProvider.notifier)
+          .isCurrent(widget.sessionId, generation);
+
+  Future<void> _cancelCurrentTask() async {
+    final stateNotifier = ref.read(promptAssistantStateProvider.notifier);
+    if (!stateNotifier.getState(widget.sessionId).processing) {
+      return;
+    }
+
+    ++_operationGeneration;
+    stateNotifier.cancelProcessing(widget.sessionId);
+    final subscription = _streamSub;
+    _streamSub = null;
+    await subscription?.cancel();
+    try {
+      await ref
+          .read(promptAssistantServiceProvider)
+          .cancelCurrentTask(sessionId: widget.sessionId);
+    } catch (_) {
+      // Cancellation is best-effort; the generation invalidation above is
+      // what prevents a late stream result from touching the editor.
+    }
   }
 
   void _replaceText(String value) {
@@ -411,12 +472,7 @@ class _PromptAssistantOverlayState
         if (value == 'history') {
           _showHistory();
         } else if (value == 'cancel') {
-          await ref
-              .read(promptAssistantServiceProvider)
-              .cancelCurrentTask(sessionId: widget.sessionId);
-          ref
-              .read(promptAssistantStateProvider.notifier)
-              .finishProcessing(widget.sessionId);
+          await _cancelCurrentTask();
         } else if (value != null) {
           widget.onOpenSettings?.call();
         }
@@ -522,12 +578,7 @@ class _PromptAssistantOverlayState
                   title: Text(context.l10n.promptAssistant_cancelCurrentTask),
                   onTap: () async {
                     Navigator.pop(sheetContext);
-                    await ref
-                        .read(promptAssistantServiceProvider)
-                        .cancelCurrentTask(sessionId: widget.sessionId);
-                    ref
-                        .read(promptAssistantStateProvider.notifier)
-                        .finishProcessing(widget.sessionId);
+                    await _cancelCurrentTask();
                   },
                 ),
             ],
@@ -659,12 +710,7 @@ class _PromptAssistantOverlayState
                         ? context.l10n.promptAssistant_cancelTask
                         : context.l10n.promptAssistant_menu,
                     onPressed: isProcessing
-                        ? () async {
-                            await ref
-                                .read(promptAssistantServiceProvider)
-                                .cancelCurrentTask(sessionId: widget.sessionId);
-                            notifier.finishProcessing(widget.sessionId);
-                          }
+                        ? () => unawaited(_cancelCurrentTask())
                         : () => _showMenu(),
                   ),
                   _miniButton(
@@ -712,12 +758,7 @@ class _PromptAssistantOverlayState
                         ? context.l10n.promptAssistant_cancelTask
                         : context.l10n.promptAssistant_menu,
                     onPressed: isProcessing
-                        ? () async {
-                            await ref
-                                .read(promptAssistantServiceProvider)
-                                .cancelCurrentTask(sessionId: widget.sessionId);
-                            notifier.finishProcessing(widget.sessionId);
-                          }
+                        ? () => unawaited(_cancelCurrentTask())
                         : () => _showMenu(),
                   ),
                   _miniButton(
