@@ -63,9 +63,15 @@ try {
         exit 0
     }
 
+    # Windows PowerShell 5.1 does not expose [IO.Path]::GetRelativePath.
+    # Every test file is below the repository root, so a normalized prefix
+    # subtraction keeps this helper usable on both Windows PowerShell and
+    # modern pwsh without changing the selected paths.
     $allTests = @(
         Get-ChildItem -Path 'test' -Recurse -File -Filter '*_test.dart' |
-            ForEach-Object { Normalize-RepoPath ([IO.Path]::GetRelativePath($repoRoot, $_.FullName)) }
+            ForEach-Object {
+                Normalize-RepoPath $_.FullName.Substring($repoRoot.Length).TrimStart([char[]]@('\', '/'))
+            }
     )
     $selectedTests = [System.Collections.Generic.HashSet[string]]::new(
         [System.StringComparer]::OrdinalIgnoreCase
@@ -108,7 +114,7 @@ try {
 
         $sourceBaseName = [IO.Path]::GetFileNameWithoutExtension($changedFile)
         foreach ($testFile in $allTests) {
-            if ($testContents[$testFile].Contains($packageImport, [System.StringComparison]::Ordinal) -or
+            if ($testContents[$testFile].IndexOf($packageImport, [System.StringComparison]::Ordinal) -ge 0 -or
                 [IO.Path]::GetFileNameWithoutExtension($testFile) -eq "${sourceBaseName}_test") {
                 [void]$selectedTests.Add($testFile)
             }
