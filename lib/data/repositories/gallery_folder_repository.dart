@@ -10,6 +10,7 @@ import '../../core/storage/local_storage_service.dart';
 import '../../core/utils/app_logger.dart';
 import '../../core/utils/file_name_sanitizer.dart';
 import '../models/gallery/gallery_folder.dart';
+import '../services/project_workspace_service.dart';
 
 /// 画廊文件夹仓库
 class GalleryFolderRepository {
@@ -27,6 +28,10 @@ class GalleryFolderRepository {
   /// 优先使用用户设置的自定义路径，如果没有设置则返回默认路径
   /// 默认路径：Documents/NAI_Launcher/images/
   Future<String?> getRootPath() async {
+    final projectPath = await ProjectWorkspaceService.instance
+        .getCurrentImagesPath();
+    if (projectPath != null && projectPath.isNotEmpty) return projectPath;
+
     // 优先使用用户设置的自定义路径
     final customPath = _localStorage.getImageSavePath();
     if (customPath != null && customPath.isNotEmpty) {
@@ -55,8 +60,9 @@ class GalleryFolderRepository {
           if (folder != null) folders.add(folder);
         }
       }
-      folders
-          .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      folders.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
     } catch (e) {
       AppLogger.e('扫描文件夹失败', e);
     }
@@ -87,11 +93,13 @@ class GalleryFolderRepository {
   Future<int> _countImagesInFolder(String folderPath) async {
     int count = 0;
     try {
-      await for (final entity
-          in Directory(folderPath).list(followLinks: false)) {
+      await for (final entity in Directory(
+        folderPath,
+      ).list(followLinks: false)) {
         if (entity is File &&
-            _supportedExtensions
-                .contains(p.extension(entity.path).toLowerCase())) {
+            _supportedExtensions.contains(
+              p.extension(entity.path).toLowerCase(),
+            )) {
           count++;
         }
       }
@@ -151,6 +159,11 @@ class GalleryFolderRepository {
       }
 
       await dir.delete(recursive: recursive);
+      await ProjectWorkspaceService.instance.moveFolderSidecars(
+        folderPath,
+        folderPath,
+        delete: true,
+      );
       AppLogger.i('删除文件夹成功: $folderPath');
       return true;
     } catch (e) {
@@ -175,6 +188,10 @@ class GalleryFolderRepository {
       }
 
       final newDir = await dir.rename(newPath);
+      await ProjectWorkspaceService.instance.moveFolderSidecars(
+        oldPath,
+        newPath,
+      );
       AppLogger.i('重命名文件夹成功: $oldPath -> $newPath');
       return await _createFolderFromDirectory(newDir);
     } catch (e) {
@@ -204,7 +221,9 @@ class GalleryFolderRepository {
         );
       }
 
+      final oldPath = file.path;
       await file.rename(newPath);
+      await ProjectWorkspaceService.instance.moveImageSidecar(oldPath, newPath);
       return true;
     } catch (e) {
       AppLogger.e('移动图片失败: $imagePath -> $targetFolderPath', e);
@@ -268,8 +287,9 @@ class GalleryFolderRepository {
     try {
       await for (final entity in rootDir.list(followLinks: false)) {
         if (entity is File &&
-            _supportedExtensions
-                .contains(p.extension(entity.path).toLowerCase())) {
+            _supportedExtensions.contains(
+              p.extension(entity.path).toLowerCase(),
+            )) {
           count++;
         } else if (entity is Directory) {
           count += await _countImagesInFolder(entity.path);

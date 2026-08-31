@@ -237,6 +237,27 @@ class LocalStorageService {
     await setSetting(StorageKeys.imageSavePath, path);
   }
 
+  // ==================== Project Workspace ====================
+
+  /// 获取当前项目工作区路径。
+  ///
+  /// 工作区是可选的；返回 null 表示继续使用旧版全局图片目录。
+  String? getProjectWorkspacePath() {
+    final path = getSetting<String>(StorageKeys.projectWorkspacePath);
+    if (path == null || path.trim().isEmpty) return null;
+    return path.trim();
+  }
+
+  /// 保存当前项目工作区路径。
+  Future<void> setProjectWorkspacePath(String? path) async {
+    final normalized = path?.trim();
+    if (normalized == null || normalized.isEmpty) {
+      await deleteSetting(StorageKeys.projectWorkspacePath);
+    } else {
+      await setSetting(StorageKeys.projectWorkspacePath, normalized);
+    }
+  }
+
   /// 获取是否自动保存图片
   bool getAutoSaveImages() {
     return getSetting<bool>(StorageKeys.autoSaveImages, defaultValue: true) ??

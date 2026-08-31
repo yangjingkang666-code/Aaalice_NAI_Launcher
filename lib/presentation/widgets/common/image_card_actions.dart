@@ -11,6 +11,8 @@ import '../../../core/utils/image_save_utils.dart';
 import '../../../core/utils/image_share_sanitizer.dart';
 import '../../../core/utils/localization_extension.dart';
 import '../../../data/repositories/gallery_folder_repository.dart';
+import '../../../data/services/image_metadata_service.dart';
+import '../../../data/services/project_workspace_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../providers/share_image_settings_provider.dart';
 import '../../utils/clipboard_image.dart';
@@ -303,6 +305,19 @@ class ImageCardActionCoordinator {
         bytes: bytes,
         seed: await ImageSaveUtils.resolveSeed(bytes: bytes),
       );
+      try {
+        final metadata = await ImageMetadataService().getMetadataFromBytes(
+          bytes,
+        );
+        await ProjectWorkspaceService.instance.writeImageSidecar(
+          imagePath: filePath,
+          imageId: _data.imageIdentity?.toString(),
+          metadata: metadata?.toJson(),
+        );
+      } catch (_) {
+        // A sidecar is optional and must not turn a successfully saved image
+        // into a failed save action.
+      }
       if (PlatformCapabilities.current.supportsSystemGalleryExport) {
         try {
           await AndroidMediaStoreService.savePng(

@@ -17,6 +17,7 @@ import '../../../../data/services/local_onnx_tagger_service.dart';
 import '../../../../data/services/local_tagger_execution_strategy.dart';
 import '../../../../data/services/local_tagger_manager_service.dart';
 import '../../../providers/image_save_settings_provider.dart';
+import '../../../providers/project_workspace_provider.dart';
 import '../../../widgets/common/app_toast.dart';
 import '../widgets/cache_statistics_tile.dart';
 import '../widgets/data_source_cache_settings.dart';
@@ -56,6 +57,55 @@ class _StorageSettingsSectionState
       if (context.mounted) {
         AppToast.error(context, context.l10n.image_saveFailed(e.toString()));
       }
+    }
+  }
+
+  Future<void> _selectProjectDirectory(BuildContext context) async {
+    if (!PlatformCapabilities.current.supportsCustomStorageDirectories) return;
+    try {
+      final result = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: context.l10n.settings_selectFolder,
+      );
+      if (result == null || !context.mounted) return;
+      final workspace = await ref
+          .read(projectWorkspaceProvider.notifier)
+          .openProject(result);
+      if (context.mounted && workspace != null) {
+        AppToast.success(context, context.l10n.settings_pathSaved);
+      }
+    } catch (error) {
+      if (context.mounted) {
+        AppToast.error(
+          context,
+          context.l10n.image_saveFailed(error.toString()),
+        );
+      }
+    }
+  }
+
+  Future<void> _importProjectContent(BuildContext context) async {
+    final result = await ref
+        .read(projectWorkspaceProvider.notifier)
+        .importLegacyContent();
+    if (!context.mounted || result == null) return;
+    final message = '${context.l10n.common_import}: ${result.totalCopied}';
+    if (result.hasErrors) {
+      AppToast.warning(context, '$message · ${result.errors.length}');
+    } else {
+      AppToast.success(context, message);
+    }
+  }
+
+  Future<void> _openProjectDirectory(String path) async {
+    if (path.isEmpty) return;
+    final openFolderFailed = context.l10n.settings_openFolderFailed;
+    try {
+      await launchUrl(
+        Uri.directory(path),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (error) {
+      AppLogger.e(openFolderFailed, error);
     }
   }
 
@@ -332,6 +382,7 @@ class _StorageSettingsSectionState
   @override
   Widget build(BuildContext context) {
     final saveSettings = ref.watch(imageSaveSettingsNotifierProvider);
+    final projectState = ref.watch(projectWorkspaceProvider);
     final localOnnxService = ref.watch(localOnnxModelServiceProvider);
     final localTaggerManager = ref.watch(localTaggerManagerServiceProvider);
     final localOnnxDirectory = localOnnxService.taggerDirectory;
@@ -344,6 +395,63 @@ class _StorageSettingsSectionState
           icon: Icons.image_outlined,
           child: Column(
             children: [
+              // 可选项目工作区：启用后图片与 Prompt Recipe 按项目隔离。
+              ListTile(
+                leading: const Icon(Icons.folder_special_outlined),
+                title: Text(context.l10n.settings_imageSavePath),
+                subtitle: Text(
+                  projectState.current == null
+                      ? context.l10n.settings_defaultImagesPath
+                      : '${projectState.current!.name}\n${projectState.current!.path}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing:
+                    PlatformCapabilities
+                        .current
+                        .supportsCustomStorageDirectories
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (projectState.current != null)
+                            IconButton(
+                              icon: const Icon(Icons.folder_open, size: 20),
+                              tooltip: context.l10n.settings_openFolder,
+                              onPressed: () => _openProjectDirectory(
+                                projectState.current!.path,
+                              ),
+                            ),
+                          if (projectState.current != null)
+                            IconButton(
+                              icon: const Icon(
+                                Icons.file_upload_outlined,
+                                size: 20,
+                              ),
+                              tooltip: context.l10n.common_import,
+                              onPressed: projectState.isLoading
+                                  ? null
+                                  : () => _importProjectContent(context),
+                            ),
+                          if (projectState.current != null)
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 20),
+                              tooltip: context.l10n.common_close,
+                              onPressed: projectState.isLoading
+                                  ? null
+                                  : () => ref
+                                        .read(projectWorkspaceProvider.notifier)
+                                        .closeProject(),
+                            ),
+                        ],
+                      )
+                    : null,
+                onTap:
+                    PlatformCapabilities
+                        .current
+                        .supportsCustomStorageDirectories
+                    ? () => _selectProjectDirectory(context)
+                    : null,
+              ),
               // 图片保存路径设置
               ListTile(
                 leading: const Icon(Icons.folder_outlined),

@@ -55,6 +55,17 @@ void main() {
       );
     });
 
+    test('runs startup scan when count matches but paths changed', () {
+      expect(
+        chooseStartupIndexAction(
+          databaseImageCount: 16,
+          fileSystemImageCount: 16,
+          pathsMatch: false,
+        ),
+        GalleryStartupIndexAction.fullScan,
+      );
+    });
+
     test('does not start another scan during background scanning refresh', () {
       expect(
         shouldRunRefreshIndexScan(

@@ -12,11 +12,13 @@ class PromptSemanticDraftState {
     this.prompt = '',
     this.entries = const [],
     this.translations = const {},
+    this.retrievalEvidence = const [],
   });
 
   final String prompt;
   final List<PromptSemanticEntry> entries;
   final Map<String, String> translations;
+  final List<RetrievalEvidence> retrievalEvidence;
 
   StructuredPrompt get structured => PromptSemanticEntryBuilder.buildSync(
     prompt,
@@ -31,11 +33,13 @@ class PromptSemanticDraftState {
     String? prompt,
     List<PromptSemanticEntry>? entries,
     Map<String, String>? translations,
+    List<RetrievalEvidence>? retrievalEvidence,
   }) {
     return PromptSemanticDraftState(
       prompt: prompt ?? this.prompt,
       entries: entries ?? this.entries,
       translations: translations ?? this.translations,
+      retrievalEvidence: retrievalEvidence ?? this.retrievalEvidence,
     );
   }
 }
@@ -54,11 +58,13 @@ class PromptSemanticDraftNotifier
     required String prompt,
     required List<PromptSemanticEntry> entries,
     Map<String, String> translations = const {},
+    List<RetrievalEvidence> retrievalEvidence = const [],
   }) {
     state = PromptSemanticDraftState(
       prompt: prompt,
       entries: List.unmodifiable(entries),
       translations: Map.unmodifiable(translations),
+      retrievalEvidence: List.unmodifiable(retrievalEvidence),
     );
   }
 

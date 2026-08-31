@@ -9,6 +9,7 @@ import '../../../core/autocomplete/tag_catalog_repository.dart';
 import '../../../data/models/image/image_params.dart';
 import '../../../data/models/recipe/prompt_recipe.dart';
 import '../../../data/services/image_metadata_service.dart';
+import '../../../data/services/project_workspace_service.dart';
 import '../../../data/services/prompt_semantic_entry_builder.dart';
 import '../../services/generation_history_storage_service.dart';
 import 'generation_models.dart';
@@ -103,6 +104,7 @@ class GenerationResultLifecycleService {
     String? providerModel,
     List<PromptSemanticEntry>? mainPromptEntries,
     StructuredPrompt? structuredMain,
+    List<RetrievalEvidence>? retrievalEvidence,
   }) async {
     final repository = dependencies.recipeRepository;
     if (repository == null) return null;
@@ -119,6 +121,7 @@ class GenerationResultLifecycleService {
       characters: characters,
       mainPromptEntries: semantic.entries,
       structuredMain: structuredMain ?? semantic.structured,
+      retrievalEvidence: retrievalEvidence ?? const [],
       parentRecipeId: parentRecipeId,
       sourceGalleryItemId: sourceGalleryItemId,
       provider: provider,
@@ -261,6 +264,23 @@ class GenerationResultLifecycleService {
           bytes: bytes,
           seed: actualSeed,
         );
+        try {
+          final sidecarMetadata =
+              image.metadata ??
+              await ImageMetadataService().getMetadataFromBytes(bytes);
+          await ProjectWorkspaceService.instance.writeImageSidecar(
+            imagePath: path,
+            imageId: image.id,
+            recipeId: image.recipeId,
+            metadata: sidecarMetadata?.toJson(),
+          );
+        } catch (error, stackTrace) {
+          // Sidecars are an additional project index. A successful image save
+          // must remain usable if metadata parsing or the sidecar filesystem
+          // is temporarily unavailable.
+          AppLogger.w('项目图像侧车写入失败: $error', 'ProjectWorkspace');
+          AppLogger.d(stackTrace.toString(), 'ProjectWorkspace');
+        }
         paths.add(path);
         updated.add(image.copyWithFilePath(path));
       } catch (error, stackTrace) {

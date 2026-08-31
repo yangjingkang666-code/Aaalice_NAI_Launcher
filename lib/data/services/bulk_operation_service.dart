@@ -11,6 +11,7 @@ import '../../core/utils/app_logger.dart';
 import '../../core/utils/bulk_tag_edit_utils.dart';
 import '../models/gallery/local_image_record.dart';
 import '../models/gallery/nai_image_metadata.dart';
+import 'project_workspace_service.dart';
 
 part 'bulk_operation_service.g.dart';
 
@@ -76,6 +77,7 @@ class BulkOperationService {
         final file = File(imagePath);
         if (await file.exists()) {
           await file.delete();
+          await ProjectWorkspaceService.instance.deleteImageSidecar(imagePath);
           successCount++;
           successfulItems.add(imagePath);
           AppLogger.d(

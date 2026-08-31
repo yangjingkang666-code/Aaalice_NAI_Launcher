@@ -6,11 +6,13 @@ import 'package:path/path.dart' as p;
 
 import '../../../../core/platform/platform_capabilities.dart';
 import '../../../../core/services/android_media_store_service.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/localization_extension.dart';
 import '../../../../core/utils/image_save_utils.dart';
 import '../../../../data/models/gallery/nai_image_metadata.dart';
 import '../../../../data/repositories/gallery_folder_repository.dart';
 import '../../../../data/services/image_metadata_service.dart';
+import '../../../../data/services/project_workspace_service.dart';
 import '../../../providers/generation/generation_models.dart';
 import '../../../providers/local_gallery_provider.dart';
 import '../../../utils/image_detail_opener.dart';
@@ -128,6 +130,20 @@ class GenerationSaveService {
           bytes: imageBytes,
         ),
       );
+      try {
+        final sidecarMetadata =
+            existingMetadata ??
+            await ImageMetadataService().getMetadataFromBytes(finalBytes);
+        await ProjectWorkspaceService.instance.writeImageSidecar(
+          imagePath: filePath,
+          imageId: image.identifier,
+          metadata: sidecarMetadata?.toJson(),
+        );
+      } catch (error) {
+        // Project sidecars improve portability but must not make an image
+        // save appear to fail after the PNG has already been written.
+        AppLogger.w('项目图像侧车写入失败: $error', 'ProjectWorkspace');
+      }
 
       Object? systemGalleryError;
       if (PlatformCapabilities.current.supportsSystemGalleryExport) {

@@ -100,6 +100,9 @@ class StorageKeys {
   static const String selectedResolutionPresetId =
       'selected_resolution_preset_id';
   static const String imageSavePath = 'image_save_path';
+
+  /// 当前项目工作区根目录。图片、配方和项目侧车数据均以此目录为边界。
+  static const String projectWorkspacePath = 'project_workspace_path';
   static const String autoSaveImages = 'auto_save_images';
   static const String imageStraightAlpha = 'image_straight_alpha';
   static const String shareStripMetadata = 'share_strip_metadata';

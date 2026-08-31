@@ -19,6 +19,7 @@ import '../../../core/utils/zip_utils.dart';
 import '../../../data/models/gallery/local_image_record.dart';
 import '../../../data/models/gallery/nai_image_metadata.dart';
 import '../../../data/repositories/gallery_folder_repository.dart';
+import '../../../data/services/project_workspace_service.dart';
 import '../../providers/bulk_operation_provider.dart';
 import '../../agent_chat/providers/agent_chat_notifier.dart';
 import '../../providers/collection_provider.dart';
@@ -142,6 +143,7 @@ class LocalGalleryActionCoordinator {
         final file = File(image.path);
         if (await file.exists()) {
           await file.delete();
+          await ProjectWorkspaceService.instance.deleteImageSidecar(image.path);
           deletedCount++;
         }
       } catch (_) {
@@ -864,6 +866,7 @@ class LocalGalleryActionCoordinator {
       final file = File(record.path);
       if (!await file.exists()) return;
       await file.delete();
+      await ProjectWorkspaceService.instance.deleteImageSidecar(record.path);
       await _ref.read(localGalleryNotifierProvider.notifier).refresh();
       if (_mounted()) {
         AppToast.success(_context(), _context().l10n.localGallery_imageDeleted);

@@ -14,8 +14,10 @@ GalleryStartupIndexAction chooseStartupIndexAction({
   required int databaseImageCount,
   required int fileSystemImageCount,
   int? unparsedImageCount = 0,
+  bool pathsMatch = true,
 }) {
-  if (databaseImageCount > 0 &&
+  if (pathsMatch &&
+      databaseImageCount > 0 &&
       databaseImageCount == fileSystemImageCount &&
       unparsedImageCount == 0) {
     return GalleryStartupIndexAction.none;
@@ -158,10 +160,27 @@ class GalleryScanCoordinator {
           'LocalGalleryService',
         );
       }
+      var pathsMatch = true;
+      try {
+        final pathMap = await _dataSource.getImageIdsByPaths(
+          files.map((file) => file.path).toList(growable: false),
+        );
+        pathsMatch = files.isEmpty
+            ? existingCount == 0
+            : pathMap.length == files.length &&
+                  pathMap.values.every((id) => id != null);
+      } catch (error) {
+        pathsMatch = false;
+        AppLogger.w(
+          'Gallery path identity check failed; running startup scan: $error',
+          'LocalGalleryService',
+        );
+      }
       final action = chooseStartupIndexAction(
         databaseImageCount: existingCount,
         fileSystemImageCount: files.length,
         unparsedImageCount: unparsedImageCount,
+        pathsMatch: pathsMatch,
       );
       if (action == GalleryStartupIndexAction.none) {
         AppLogger.i(

@@ -10,6 +10,7 @@ import '../../../../data/models/recipe/prompt_recipe.dart';
 import '../../../../data/services/prompt_semantic_entry_builder.dart';
 import '../../../providers/prompt_semantic_provider.dart';
 import '../../../prompt_assistant/services/prompt_assistant_service.dart';
+import 'knowledge_search_dialog.dart';
 
 /// Reviewable semantic classification for unknown prompt phrases.
 class PromptSemanticWorkbenchDialog extends ConsumerStatefulWidget {
@@ -69,6 +70,7 @@ class _PromptSemanticWorkbenchDialogState
 
   late List<PromptSemanticEntry> _entries;
   Map<String, String> _translations = const {};
+  List<RetrievalEvidence> _retrievalEvidence = const [];
   List<String> _warnings = const [];
   String? _error;
   bool _loading = false;
@@ -80,6 +82,10 @@ class _PromptSemanticWorkbenchDialogState
     _entries = draft.matchesPrompt(widget.prompt)
         ? List.of(draft.entries)
         : PromptSemanticEntryBuilder.buildSync(widget.prompt).entries;
+    if (draft.matchesPrompt(widget.prompt)) {
+      _translations = Map.of(draft.translations);
+      _retrievalEvidence = List.of(draft.retrievalEvidence);
+    }
     unawaited(_hydrateLocalCategories());
   }
 
@@ -149,8 +155,27 @@ class _PromptSemanticWorkbenchDialogState
           prompt: widget.prompt,
           entries: _entries,
           translations: _translations,
+          retrievalEvidence: _retrievalEvidence,
         );
     Navigator.of(context).pop();
+  }
+
+  Future<void> _openKnowledgeSearch() async {
+    await KnowledgeSearchDialog.show(
+      context,
+      prompt: widget.prompt,
+      initialEntries: _entries,
+      initialTranslations: _translations,
+      initialRetrievalEvidence: _retrievalEvidence,
+    );
+    if (!mounted) return;
+    final draft = ref.read(promptSemanticDraftProvider);
+    if (draft.matchesPrompt(widget.prompt)) {
+      setState(() {
+        _entries = List.of(draft.entries);
+        _retrievalEvidence = List.of(draft.retrievalEvidence);
+      });
+    }
   }
 
   @override
@@ -219,6 +244,11 @@ class _PromptSemanticWorkbenchDialogState
                 )
               : const Icon(Icons.auto_awesome, size: 18),
           label: Text(context.l10n.prompt_semanticOrganize),
+        ),
+        TextButton.icon(
+          onPressed: _loading ? null : _openKnowledgeSearch,
+          icon: const Icon(Icons.travel_explore_rounded, size: 18),
+          label: Text(context.l10n.common_search),
         ),
         FilledButton(
           onPressed: _loading || _entries.isEmpty ? null : _apply,

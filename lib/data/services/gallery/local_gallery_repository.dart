@@ -9,6 +9,7 @@ import '../../../core/utils/app_logger.dart';
 import '../../models/gallery/local_image_record.dart';
 import '../../models/gallery/nai_image_metadata.dart';
 import '../../repositories/gallery_folder_repository.dart';
+import '../project_workspace_service.dart';
 import '../image_metadata_service.dart';
 import 'scan_config.dart';
 
@@ -119,16 +120,30 @@ class LocalGalleryRepository {
     final favorites = results[0] as Map<int, bool>;
     final tags = results[1] as Map<int, List<String>>;
     final metadata = results[2] as Map<int, GalleryMetadataRecord?>;
+    var projectSidecars = const <NaiImageMetadata?>[];
+    try {
+      if (await ProjectWorkspaceService.instance.current() != null) {
+        projectSidecars = await Future.wait(
+          files.map((file) => _readProjectSidecarMetadata(file.path)),
+        );
+      }
+    } catch (error) {
+      AppLogger.w(
+        'Project sidecar metadata preload failed: $error',
+        'LocalGalleryService',
+      );
+    }
     final records = <LocalImageRecord>[];
-    for (final file in files) {
+    for (var index = 0; index < files.length; index++) {
+      final file = files[index];
       try {
         final stat = fileStats[file];
         if (stat == null) continue;
         final imageId = pathToId[file.path];
         final metadataRecord = imageId == null ? null : metadata[imageId];
-        final imageMetadata = metadataRecord == null
-            ? null
-            : _buildMetadata(metadataRecord);
+        final imageMetadata =
+            (projectSidecars.isNotEmpty ? projectSidecars[index] : null) ??
+            (metadataRecord == null ? null : _buildMetadata(metadataRecord));
         records.add(
           LocalImageRecord(
             path: file.path,
@@ -193,8 +208,44 @@ class LocalGalleryRepository {
 
   Future<int> getFavoriteCount() => _dataSource.getFavoriteCount();
 
-  Future<NaiImageMetadata?> getMetadata(String filePath) =>
-      ImageMetadataService().getMetadataImmediate(filePath);
+  Future<NaiImageMetadata?> getMetadata(String filePath) async {
+    final sidecar = await ProjectWorkspaceService.instance.readImageSidecar(
+      filePath,
+    );
+    final rawMetadata = sidecar?['metadata'];
+    if (rawMetadata is Map) {
+      try {
+        return NaiImageMetadata.fromJson(
+          Map<String, dynamic>.from(rawMetadata),
+        ).upgradeFromRawJsonIfNeeded();
+      } catch (error) {
+        AppLogger.w(
+          'Ignoring malformed project metadata sidecar: $error',
+          'LocalGalleryService',
+        );
+      }
+    }
+    return ImageMetadataService().getMetadataImmediate(filePath);
+  }
+
+  Future<NaiImageMetadata?> _readProjectSidecarMetadata(String filePath) async {
+    final sidecar = await ProjectWorkspaceService.instance.readImageSidecar(
+      filePath,
+    );
+    final rawMetadata = sidecar?['metadata'];
+    if (rawMetadata is! Map) return null;
+    try {
+      return NaiImageMetadata.fromJson(
+        Map<String, dynamic>.from(rawMetadata),
+      ).upgradeFromRawJsonIfNeeded();
+    } catch (error) {
+      AppLogger.w(
+        'Ignoring malformed project metadata sidecar: $error',
+        'LocalGalleryService',
+      );
+      return null;
+    }
+  }
 
   Future<bool> addImage(File file, {NaiImageMetadata? metadata}) async {
     final stat = await file.stat();

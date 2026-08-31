@@ -25,6 +25,7 @@ import '../../../providers/layout_state_provider.dart';
 import '../../../providers/tag_library_page_provider.dart';
 
 import '../../../../data/services/image_metadata_service.dart';
+import '../../../../data/services/project_workspace_service.dart';
 import '../../../../data/repositories/gallery_folder_repository.dart';
 import '../../../providers/generation/generation_params_selectors.dart';
 import '../../../providers/generation/preview_selection_provider.dart';
@@ -1474,6 +1475,12 @@ class _HistoryPanelState extends ConsumerState<HistoryPanel> {
         bytes: image.bytes,
       ),
     );
+    await ProjectWorkspaceService.instance.writeImageSidecar(
+      imagePath: filePath,
+      imageId: image.id,
+      recipeId: image.recipeId,
+      metadata: image.metadata?.toJson(),
+    );
 
     ref
         .read(imageGenerationNotifierProvider.notifier)
@@ -1655,6 +1662,12 @@ class _HistoryPanelState extends ConsumerState<HistoryPanel> {
             bytes: image.bytes,
           ),
         );
+        await ProjectWorkspaceService.instance.writeImageSidecar(
+          imagePath: filePath,
+          imageId: image.id,
+          recipeId: image.recipeId,
+          metadata: image.metadata?.toJson(),
+        );
         if (PlatformCapabilities.current.supportsSystemGalleryExport) {
           try {
             await AndroidMediaStoreService.savePng(
@@ -1822,6 +1835,12 @@ class _HistoryPanelState extends ConsumerState<HistoryPanel> {
           metadata: image.metadata,
           bytes: image.bytes,
         ),
+      );
+      await ProjectWorkspaceService.instance.writeImageSidecar(
+        imagePath: filePath,
+        imageId: image.id,
+        recipeId: image.recipeId,
+        metadata: image.metadata?.toJson(),
       );
 
       ref.read(localGalleryNotifierProvider.notifier).refresh();

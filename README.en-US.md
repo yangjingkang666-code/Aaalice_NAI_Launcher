@@ -39,11 +39,13 @@ NAI Launcher is built for people who use NovelAI regularly: generate images, ref
 - **References and characters**: Vibe Transfer, Precise Reference, multi-character prompts, reference images, and independent negative prompts.
 - **Prompt workspace**: tag autocomplete, weight syntax, token counts, pinned words, random tag libraries, and prompt import/export.
 - **Reviewable Prompt optimization**: generated results persist structured semantic entries; one “Organize with AI” action classifies unknown phrases and supplies Chinese reading translations while local tags and manual edits stay authoritative.
+- **Knowledge / Prompt RAG**: the semantic workbench searches project vocabulary, the bundled tag catalog, and the Chinese dictionary; DanbooruSearch is tried only when local sources have no match. Candidates are applied one by one and every retrieval input is kept as Recipe evidence.
 - **Safe edits and batch planning**: the Prompt Patch workbench protects identity, parameters, and references and offers explicit reuse/random/specified seed behavior; AI batch planning proposes tasks only, which enter the serial queue after per-item review.
 
 ### 🗂️ Organize
 
 - **Local gallery**: scan local artwork, search Prompts and metadata, organize categories, favorites, and collections, and perform batch operations.
+- **Project workspaces**: optionally keep `images/`, image sidecars, Recipes, and project vocabulary together in a selected folder; legacy gallery files and Recipes can be imported without overwriting existing project files, and switching projects re-indexes by path.
 - **Generation queue**: submit batches, pause/resume, reorder, handle failures, and track progress.
 - **Reproducible queue tasks**: an implicit random seed is resolved once at queue admission and reused after retries or restarts.
 - **Image details**: inspect generation parameters, positive/negative prompts, and character prompts; copy selected content back to the generator or tag library.
@@ -193,6 +195,7 @@ You can sign in with NovelAI credentials or a **Persistent API Token**. If web s
 ### 3. Set up your workflow
 
 - **Local gallery**: choose artwork folders in Settings, then open the gallery to start scanning. Scanning is performed on demand rather than immediately on application startup.
+- **Project workspace**: under **Settings → Data & Storage**, choose or create a project directory. Use Import when you want to copy legacy images and Recipes; existing project files are never overwritten. Close the project to return to the legacy global image folder.
 - **Autocomplete**: the base tag catalog is included and works offline. Related-tag recommendations, the Chinese tag dictionary, and AI translation are optional data sources managed under **Settings → Data Sources & Cache**.
 - **Krita**: enable Krita Bridge in Launcher Settings, then follow [`krita_plugin/README.md`](krita_plugin/README.md) to install the plugin.
 - **ComfyUI**: configure the local ComfyUI address and workflow under **Settings → Integrations**. Models and nodes remain managed by your ComfyUI environment.

@@ -28,7 +28,11 @@ class PromptRecipeApplicationService {
     if (recipe == null) return null;
 
     final restored = PromptRecipeRestorationService.restore(recipe);
-    _applyRestored(restored, semanticEntries: recipe.mainPromptEntries);
+    _applyRestored(
+      restored,
+      semanticEntries: recipe.mainPromptEntries,
+      retrievalEvidence: recipe.retrievalEvidence,
+    );
     return restored;
   }
 
@@ -54,6 +58,7 @@ class PromptRecipeApplicationService {
       restored,
       keepAssets: true,
       semanticEntries: recipe.mainPromptEntries,
+      retrievalEvidence: recipe.retrievalEvidence,
     );
     return restored;
   }
@@ -85,7 +90,11 @@ class PromptRecipeApplicationService {
     await repository.save(applied.recipe);
 
     final restored = PromptRecipeRestorationService.restore(applied.recipe);
-    _applyRestored(restored, semanticEntries: applied.recipe.mainPromptEntries);
+    _applyRestored(
+      restored,
+      semanticEntries: applied.recipe.mainPromptEntries,
+      retrievalEvidence: applied.recipe.retrievalEvidence,
+    );
     return applied;
   }
 
@@ -93,6 +102,7 @@ class PromptRecipeApplicationService {
     PromptRecipeRestorationResult restored, {
     bool keepAssets = false,
     List<PromptSemanticEntry>? semanticEntries,
+    List<RetrievalEvidence>? retrievalEvidence,
   }) {
     final paramsNotifier = _ref.read(generationParamsNotifierProvider.notifier);
     if (keepAssets) {
@@ -109,7 +119,11 @@ class PromptRecipeApplicationService {
     if (semanticEntries != null) {
       _ref
           .read(promptSemanticDraftProvider.notifier)
-          .apply(prompt: restored.params.prompt, entries: semanticEntries);
+          .apply(
+            prompt: restored.params.prompt,
+            entries: semanticEntries,
+            retrievalEvidence: retrievalEvidence ?? const [],
+          );
     }
   }
 }

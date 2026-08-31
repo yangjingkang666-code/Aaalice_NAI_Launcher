@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../core/storage/local_storage_service.dart';
 import '../../core/utils/app_logger.dart';
 import '../models/gallery/gallery_category.dart';
+import '../services/project_workspace_service.dart';
 
 /// 画廊分类仓库
 class GalleryCategoryRepository {
@@ -27,6 +28,10 @@ class GalleryCategoryRepository {
   /// 优先使用用户设置的自定义路径，如果没有设置则返回默认路径
   /// 默认路径：Documents/NAI_Launcher/images/
   Future<String?> getRootPath() async {
+    final projectPath = await ProjectWorkspaceService.instance
+        .getCurrentImagesPath();
+    if (projectPath != null && projectPath.isNotEmpty) return projectPath;
+
     // 优先使用用户设置的自定义路径
     final customPath = _localStorage.getImageSavePath();
     if (customPath != null && customPath.isNotEmpty) {
@@ -116,12 +121,13 @@ class GalleryCategoryRepository {
         await parent.create(recursive: true);
       }
 
-      final normalized = paths
-          .map(_normalizeCategoryPath)
-          .where((path) => path.isNotEmpty)
-          .toSet()
-          .toList()
-        ..sort();
+      final normalized =
+          paths
+              .map(_normalizeCategoryPath)
+              .where((path) => path.isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort();
 
       if (normalized.isEmpty) {
         if (await file.exists()) {
@@ -215,8 +221,9 @@ class GalleryCategoryRepository {
     if (await dir.exists()) {
       final suppressedPaths = await _loadSuppressedFolderPaths();
       if (suppressedPaths.contains(_normalizeCategoryPath(relativePath))) {
-        final siblings =
-            existingCategories.where((c) => c.parentId == parentId);
+        final siblings = existingCategories.where(
+          (c) => c.parentId == parentId,
+        );
         final category = GalleryCategory.create(
           name: name,
           folderPath: relativePath,
@@ -294,6 +301,10 @@ class GalleryCategoryRepository {
       }
 
       await oldDir.rename(newPath);
+      await ProjectWorkspaceService.instance.moveFolderSidecars(
+        oldPath,
+        newPath,
+      );
 
       AppLogger.i('重命名分类成功: ${category.name} -> $newName');
       return category.copyWith(
@@ -342,7 +353,7 @@ class GalleryCategoryRepository {
     final (newRelativePath, newAbsolutePath) = newParentId == null
         ? (
             p.basename(category.folderPath),
-            p.join(rootPath, p.basename(category.folderPath))
+            p.join(rootPath, p.basename(category.folderPath)),
           )
         : _buildMovePaths(rootPath, category, newParentId, allCategories);
 
@@ -368,6 +379,10 @@ class GalleryCategoryRepository {
       }
 
       await oldDir.rename(newAbsolutePath);
+      await ProjectWorkspaceService.instance.moveFolderSidecars(
+        oldPath,
+        newAbsolutePath,
+      );
 
       AppLogger.i('移动分类成功: ${category.name}');
       return category.copyWith(
@@ -392,8 +407,10 @@ class GalleryCategoryRepository {
       AppLogger.e('目标父分类不存在: $newParentId');
       return ('', '');
     }
-    final relativePath =
-        p.join(newParent.folderPath, p.basename(category.folderPath));
+    final relativePath = p.join(
+      newParent.folderPath,
+      p.basename(category.folderPath),
+    );
     return (relativePath, p.join(rootPath, relativePath));
   }
 
@@ -424,6 +441,11 @@ class GalleryCategoryRepository {
             return false;
           }
           await dir.delete(recursive: recursive);
+          await ProjectWorkspaceService.instance.moveFolderSidecars(
+            folderPath,
+            folderPath,
+            delete: true,
+          );
         }
       } else {
         await _suppressCategoryFolderPaths(
@@ -472,7 +494,12 @@ class GalleryCategoryRepository {
         );
       }
 
+      final oldPath = file.path;
       await file.rename(targetPath);
+      await ProjectWorkspaceService.instance.moveImageSidecar(
+        oldPath,
+        targetPath,
+      );
       return targetPath;
     } catch (e) {
       AppLogger.e('移动图片失败: $imagePath', e);
@@ -653,11 +680,13 @@ class GalleryCategoryRepository {
   }) async {
     int count = 0;
     try {
-      await for (final entity in Directory(folderPath)
-          .list(recursive: recursive, followLinks: false)) {
+      await for (final entity in Directory(
+        folderPath,
+      ).list(recursive: recursive, followLinks: false)) {
         if (entity is File &&
-            _supportedExtensions
-                .contains(p.extension(entity.path).toLowerCase())) {
+            _supportedExtensions.contains(
+              p.extension(entity.path).toLowerCase(),
+            )) {
           count++;
         }
       }

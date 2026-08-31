@@ -27,6 +27,7 @@ import '../../../../data/models/image/image_stream_chunk.dart';
 import '../../../../data/repositories/gallery_folder_repository.dart';
 import '../../../../data/services/alias_resolver_service.dart';
 import '../../../../data/services/image_metadata_service.dart';
+import '../../../../data/services/project_workspace_service.dart';
 import '../../../providers/generation/generation_params_selectors.dart';
 import '../../../providers/generation/preview_selection_provider.dart';
 import '../../../providers/history_click_behavior_provider.dart';
@@ -931,6 +932,12 @@ class _ImagePreviewWidgetState extends ConsumerState<ImagePreviewWidget> {
           bytes: image.bytes,
         ),
       );
+      await ProjectWorkspaceService.instance.writeImageSidecar(
+        imagePath: filePath,
+        imageId: image.id,
+        recipeId: image.recipeId,
+        metadata: image.metadata?.toJson(),
+      );
 
       ref.read(localGalleryNotifierProvider.notifier).refresh();
       await FileExplorerUtils.revealFile(filePath);
@@ -1229,6 +1236,11 @@ class _ImagePreviewWidgetState extends ConsumerState<ImagePreviewWidget> {
         rootPath: saveDir.path,
         bytes: finalBytes,
         seed: actualSeed,
+      );
+      await ProjectWorkspaceService.instance.writeImageSidecar(
+        imagePath: filePath,
+        imageId: image.identifier,
+        metadata: image.metadata?.toJson(),
       );
 
       Object? systemGalleryError;

@@ -105,6 +105,7 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
   ImageParams? _activeRecipeParams;
   List<RecipeCharacter> _activeRecipeCharacters = const [];
   List<PromptSemanticEntry> _activeRecipeSemanticEntries = const [];
+  List<RetrievalEvidence> _activeRecipeRetrievalEvidence = const [];
   bool _isDisposed = false;
   int _lifecycleEpoch = 0;
 
@@ -118,6 +119,7 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
       _activeRecipeParams = null;
       _activeRecipeCharacters = const [];
       _activeRecipeSemanticEntries = const [];
+      _activeRecipeRetrievalEvidence = const [];
       final invocationSettled = _generationInvocationSettled;
       _generationInvocationSettled = null;
       if (invocationSettled != null && !invocationSettled.isCompleted) {
@@ -423,6 +425,7 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
         _activeRecipeParams = null;
         _activeRecipeCharacters = const [];
         _activeRecipeSemanticEntries = const [];
+        _activeRecipeRetrievalEvidence = const [];
       }
       if (!invocationSettled.isCompleted) {
         invocationSettled.complete();
@@ -524,14 +527,22 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
         _activeRecipeParams = params;
         _activeRecipeCharacters = _recipeCharactersSnapshot();
         final semanticDraft = ref.read(promptSemanticDraftProvider);
+        final hasMatchingSemanticDraft = semanticDraft.matchesPrompt(
+          params.prompt,
+        );
         // Fixed tags, alias expansion and preset resolution can change the
         // final wire prompt. Rebuild against that prompt while carrying over
         // matching manual/AI classifications instead of dropping the draft
         // merely because the final string is not byte-for-byte identical.
         _activeRecipeSemanticEntries = PromptSemanticEntryBuilder.buildSync(
           params.prompt,
-          existingEntries: semanticDraft.entries,
+          existingEntries: hasMatchingSemanticDraft
+              ? semanticDraft.entries
+              : const [],
         ).entries;
+        _activeRecipeRetrievalEvidence = hasMatchingSemanticDraft
+            ? List.unmodifiable(semanticDraft.retrievalEvidence)
+            : const [];
         state = state.copyWith(
           currentImages: [],
           status: GenerationStatus.generating,
@@ -660,6 +671,7 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
           params: _activeRecipeParams ?? params,
           characters: _activeRecipeCharacters,
           mainPromptEntries: _activeRecipeSemanticEntries,
+          retrievalEvidence: _activeRecipeRetrievalEvidence,
         );
         if (recipe != null) {
           images = [
