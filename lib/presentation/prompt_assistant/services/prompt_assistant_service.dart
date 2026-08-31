@@ -7,6 +7,9 @@ import 'package:dio/dio.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../data/models/recipe/prompt_recipe.dart';
 import '../../../data/services/prompt_patch_proposal_service.dart';
+import '../../../data/services/prompt_semantic_entry_builder.dart';
+import '../../../data/services/prompt_semantic_organization_service.dart';
+import '../../../data/services/ai_batch_plan_service.dart';
 import '../../providers/proxy_settings_provider.dart';
 import '../models/prompt_assistant_models.dart';
 import '../providers/prompt_assistant_config_provider.dart';
@@ -44,6 +47,30 @@ class TagTranslationBatchResult {
   });
 
   final Map<String, String> translations;
+  final String routeFingerprint;
+}
+
+class PromptSemanticOrganizationBatchResult {
+  const PromptSemanticOrganizationBatchResult({
+    required this.entries,
+    required this.translations,
+    required this.warnings,
+    required this.routeFingerprint,
+  });
+
+  final List<PromptSemanticEntry> entries;
+  final Map<String, String> translations;
+  final List<String> warnings;
+  final String routeFingerprint;
+}
+
+class AiBatchPlanProposal {
+  const AiBatchPlanProposal({
+    required this.plan,
+    required this.routeFingerprint,
+  });
+
+  final AiBatchPlan plan;
   final String routeFingerprint;
 }
 
@@ -191,6 +218,67 @@ Prompt version: $tagTranslationPromptVersion
     return translations;
   }
 
+  /// Translates and classifies unknown prompt phrases in one auditable call.
+  /// Local catalog and manual classifications are carried through unchanged.
+  Future<PromptSemanticOrganizationBatchResult> organizePrompt(
+    String prompt, {
+    required String sessionId,
+    List<PromptSemanticEntry>? entries,
+  }) async {
+    final initial =
+        entries ?? PromptSemanticEntryBuilder.buildSync(prompt).entries;
+    final userContent = PromptSemanticOrganizationService.buildUserContent(
+      initial,
+    );
+    final candidateItems = jsonDecode(userContent);
+    if (candidateItems is! List || candidateItems.isEmpty) {
+      return const PromptSemanticOrganizationBatchResult(
+        entries: [],
+        translations: {},
+        warnings: ['No unknown prompt phrases need organization.'],
+        routeFingerprint: '',
+      );
+    }
+
+    final execution = await _resolveTaskExecution(AssistantTaskType.translate);
+    final systemPrompt =
+        '''
+You organize unknown English image-generation phrases for a NovelAI prompt editor.
+Return exactly one JSON object: {"items":[{"text":"...","category":"...","kind":"tag|natural-phrase","translation":"...","confidence":0.0}]}.
+Allowed categories: subject, appearance, expression, clothing, action, adult, object, scene, lighting, camera, composition, style, quality, other.
+Return one item for each supplied phrase and never invent phrases that are not in the input. Never translate or rewrite the original prompt; translation is only for reading. Do not delete adult content. Do not add Markdown, comments, or extra fields.
+Prompt organization protocol version: 1
+'''
+            .trim();
+    final output = StringBuffer();
+    await for (final chunk in _apiClient.complete(
+      request: PromptAssistantRequest(
+        sessionId: sessionId,
+        provider: execution.provider,
+        model: execution.model.name,
+        systemPrompt: systemPrompt,
+        userParts: [PromptAssistantContentPart.text(userContent)],
+        apiKey: execution.apiKey,
+        responseFormat: PromptAssistantResponseFormat.jsonObject,
+        maxOutputTokens: 2048,
+        reasoningMode: PromptAssistantReasoningMode.disabled,
+      ),
+    )) {
+      output.write(chunk.delta);
+    }
+    final result = PromptSemanticOrganizationService.parseAndMerge(
+      output.toString(),
+      initial,
+    );
+    return PromptSemanticOrganizationBatchResult(
+      entries: result.entries,
+      translations: result.translations,
+      warnings: result.warnings,
+      routeFingerprint:
+          '${execution.provider.id}/${execution.model.name}/${execution.provider.protocol.name}',
+    );
+  }
+
   String translateRouteFingerprint() {
     final config = _ref.read(promptAssistantConfigProvider);
     final providerId = config.routing.providerIdFor(
@@ -254,6 +342,33 @@ Prompt version: $tagTranslationPromptVersion
       ],
       userInstruction:
           'Strictly output one single-line English prompt. Do not use Markdown or explanations. Prioritize visible elements and avoid inventing unseen character information.',
+    );
+  }
+
+  /// Integrates local tagger evidence and a cloud visual description without
+  /// sending the source image to the Prompt-generation model.
+  ///
+  /// This is intentionally a separate text-only call for the optional dual
+  /// local pipeline: the vision model describes what it sees, while the
+  /// generation model decides how to express that evidence as NovelAI tags.
+  Stream<StreamingChunk> integrateReverseEvidence({
+    required String localEvidence,
+    required String visualDescription,
+    required String sessionId,
+  }) async* {
+    final content = [
+      'Local tagger evidence (not authoritative):',
+      localEvidence.trim(),
+      '',
+      'Cloud visual description (primary evidence):',
+      visualDescription.trim(),
+    ].join('\n');
+    yield* _runTask(
+      sessionId: sessionId,
+      taskType: AssistantTaskType.llm,
+      userContent: content,
+      userInstruction:
+          'Synthesize one complete single-line English NovelAI prompt from the evidence. Preserve visible facts, discard conflicting or uncertain guesses, and do not invent identity. Do not output Markdown, analysis, or explanations.',
     );
   }
 
@@ -372,6 +487,79 @@ If no safe change is needed, return {"operations":[]}.''',
     return PromptPatchProposalService.parseAndValidate(
       output.toString(),
       recipe,
+    );
+  }
+
+  /// Proposes a bounded, review-only serial batch for a recipe.
+  ///
+  /// The model receives recipe metadata and the user's task description only;
+  /// this method never calls NovelAI or mutates the recipe/queue.
+  Future<AiBatchPlanProposal> proposeBatchPlan(
+    PromptRecipe recipe, {
+    required String sessionId,
+    required String instruction,
+    int requestedCount = 4,
+  }) async {
+    final normalizedInstruction = instruction.trim();
+    if (normalizedInstruction.isEmpty) {
+      throw const FormatException(
+        'Batch planning instruction cannot be empty.',
+      );
+    }
+    final count = requestedCount.clamp(1, AiBatchPlanService.maxItems);
+    final execution = await _resolveTaskExecution(AssistantTaskType.llm);
+    final systemPrompt =
+        '''
+You propose a reviewable batch of NovelAI prompt variants.
+Return exactly one JSON object with an "items" array. Each item has id, summary, and operations.
+Only vary pose, action, expression, clothing, scene, lighting, camera, or composition.
+Operations target main or character:<id> and use add, remove, replace, move, or keep.
+Never target request fields. Never change identity, core prompt, locked traits, quality, style, model, dimensions, sampler, steps, seed, or binary references.
+Every operation must include id, op, target, category, reason, evidenceIds, confidence, and explicit=false.
+Keep at most $count items and at most 8 operations per item. Do not include Markdown, comments, images, tokens, or executable instructions.
+'''
+            .trim();
+    final output = StringBuffer();
+    await for (final chunk in _apiClient.complete(
+      request: PromptAssistantRequest(
+        sessionId: sessionId,
+        provider: execution.provider,
+        model: execution.model.name,
+        systemPrompt: systemPrompt,
+        userParts: [
+          PromptAssistantContentPart.text(
+            AiBatchPlanService.buildUserContent(
+              recipe,
+              instruction: normalizedInstruction,
+              requestedCount: count,
+            ),
+          ),
+        ],
+        apiKey: execution.apiKey,
+        responseFormat: PromptAssistantResponseFormat.jsonObject,
+        maxOutputTokens: 4096,
+        reasoningMode: PromptAssistantReasoningMode.disabled,
+      ),
+    )) {
+      output.write(chunk.delta);
+    }
+    final parsedPlan = AiBatchPlanService.parseAndValidate(
+      output.toString(),
+      recipe,
+    );
+    final plan = parsedPlan.items.length <= count
+        ? parsedPlan
+        : AiBatchPlan(
+            items: parsedPlan.items.take(count).toList(growable: false),
+            warnings: [
+              ...parsedPlan.warnings,
+              'The assistant returned more items than requested; extra items were ignored.',
+            ],
+          );
+    return AiBatchPlanProposal(
+      plan: plan,
+      routeFingerprint:
+          '${execution.provider.id}/${execution.model.name}/${execution.provider.protocol.name}',
     );
   }
 

@@ -5,9 +5,11 @@ import 'dart:typed_data';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/image_save_utils.dart';
 import '../../../core/utils/nai_resolution_adapter.dart';
+import '../../../core/autocomplete/tag_catalog_repository.dart';
 import '../../../data/models/image/image_params.dart';
 import '../../../data/models/recipe/prompt_recipe.dart';
 import '../../../data/services/image_metadata_service.dart';
+import '../../../data/services/prompt_semantic_entry_builder.dart';
 import '../../services/generation_history_storage_service.dart';
 import 'generation_models.dart';
 
@@ -19,6 +21,7 @@ class GenerationResultLifecycleDependencies {
     required this.refreshGallery,
     required this.incrementStatistics,
     this.recipeRepository,
+    this.resolveExactTags,
   });
 
   final GenerationHistoryStorageService historyStorage;
@@ -27,6 +30,8 @@ class GenerationResultLifecycleDependencies {
   final Future<void> Function() refreshGallery;
   final Future<void> Function(int count) incrementStatistics;
   final PromptRecipeRepository? recipeRepository;
+  final Future<Map<String, TagCatalogRecord>> Function(Iterable<String>)?
+  resolveExactTags;
 }
 
 class GenerationSaveSnapshot {
@@ -96,13 +101,24 @@ class GenerationResultLifecycleService {
     String? sourceGalleryItemId,
     String? provider,
     String? providerModel,
+    List<PromptSemanticEntry>? mainPromptEntries,
+    StructuredPrompt? structuredMain,
   }) async {
     final repository = dependencies.recipeRepository;
     if (repository == null) return null;
 
+    final semantic = await PromptSemanticEntryBuilder.build(
+      params.prompt,
+      negativePrompt: params.negativePrompt,
+      existingEntries: mainPromptEntries ?? const [],
+      resolveExactTags: dependencies.resolveExactTags,
+    );
+
     final recipe = PromptRecipe.create(
       params: params,
       characters: characters,
+      mainPromptEntries: semantic.entries,
+      structuredMain: structuredMain ?? semantic.structured,
       parentRecipeId: parentRecipeId,
       sourceGalleryItemId: sourceGalleryItemId,
       provider: provider,

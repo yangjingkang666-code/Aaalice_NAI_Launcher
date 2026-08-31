@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/utils/localization_extension.dart';
+import '../../../../data/models/recipe/modification_seed_strategy.dart';
 import '../../../../data/models/recipe/prompt_recipe.dart';
 import '../../../../data/services/prompt_patch_service.dart';
 import '../../../prompt_assistant/services/prompt_assistant_service.dart';
 import '../../../services/prompt_recipe_application_service.dart';
+import 'prompt_batch_plan_workbench_dialog.dart';
 
 /// A small, explicit Prompt Patch workbench.
 ///
@@ -37,9 +39,11 @@ class _PromptPatchWorkbenchDialogState
     extends ConsumerState<PromptPatchWorkbenchDialog> {
   final List<_PatchDraft> _drafts = [];
   final TextEditingController _aiInstruction = TextEditingController();
+  final TextEditingController _specifiedSeed = TextEditingController();
   List<PromptPatchValidationIssue> _issues = const [];
   bool _applying = false;
   bool _proposing = false;
+  ModificationSeedStrategy _seedStrategy = ModificationSeedStrategy.base;
 
   @override
   void initState() {
@@ -50,6 +54,7 @@ class _PromptPatchWorkbenchDialogState
   @override
   void dispose() {
     _aiInstruction.dispose();
+    _specifiedSeed.dispose();
     for (final draft in _drafts) {
       draft.dispose();
     }
@@ -102,6 +107,8 @@ class _PromptPatchWorkbenchDialogState
               const SizedBox(height: 10),
               _buildRecipeSummary(context),
               const SizedBox(height: 8),
+              _buildSeedStrategySelector(context),
+              const SizedBox(height: 8),
               TextField(
                 controller: _aiInstruction,
                 enabled: !_applying && !_proposing,
@@ -137,14 +144,16 @@ class _PromptPatchWorkbenchDialogState
                 ),
               ),
               const SizedBox(height: 8),
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.end,
                 children: [
                   OutlinedButton.icon(
                     onPressed: _applying || _proposing ? null : _addDraft,
                     icon: const Icon(Icons.add),
                     label: Text(l10n.promptPatch_addOperation),
                   ),
-                  const SizedBox(width: 8),
                   OutlinedButton.icon(
                     onPressed: _applying || _proposing ? null : _propose,
                     icon: _proposing
@@ -156,14 +165,19 @@ class _PromptPatchWorkbenchDialogState
                         : const Icon(Icons.auto_awesome),
                     label: Text(l10n.promptPatch_aiPropose),
                   ),
-                  const Spacer(),
+                  OutlinedButton.icon(
+                    onPressed: _applying || _proposing
+                        ? null
+                        : _openBatchPlanner,
+                    icon: const Icon(Icons.auto_awesome_motion_rounded),
+                    label: Text(l10n.promptBatch_title),
+                  ),
                   TextButton(
                     onPressed: _applying
                         ? null
                         : () => Navigator.of(context).pop(),
                     child: Text(l10n.common_cancel),
                   ),
-                  const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: _applying || _drafts.isEmpty ? null : _apply,
                     icon: _applying
@@ -209,6 +223,82 @@ class _PromptPatchWorkbenchDialogState
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSeedStrategySelector(BuildContext context) {
+    final l10n = context.l10n;
+    final summary = switch (_seedStrategy) {
+      ModificationSeedStrategy.base => l10n.promptPatch_seedSummaryBase,
+      ModificationSeedStrategy.random => l10n.promptPatch_seedSummaryRandom,
+      ModificationSeedStrategy.specified =>
+        _specifiedSeed.text.trim().isEmpty
+            ? l10n.promptPatch_seedSpecified
+            : l10n.promptPatch_seedSummarySpecified(
+                int.tryParse(_specifiedSeed.text.trim()) ?? 0,
+              ),
+    };
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DropdownButtonFormField<ModificationSeedStrategy>(
+              initialValue: _seedStrategy,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: l10n.promptPatch_seedStrategy,
+                isDense: true,
+              ),
+              items: [
+                DropdownMenuItem(
+                  value: ModificationSeedStrategy.base,
+                  child: Text(l10n.promptPatch_seedBase),
+                ),
+                DropdownMenuItem(
+                  value: ModificationSeedStrategy.random,
+                  child: Text(l10n.promptPatch_seedRandom),
+                ),
+                DropdownMenuItem(
+                  value: ModificationSeedStrategy.specified,
+                  child: Text(l10n.promptPatch_seedSpecified),
+                ),
+              ],
+              onChanged: _applying || _proposing
+                  ? null
+                  : (value) {
+                      if (value == null) return;
+                      setState(() {
+                        _seedStrategy = value;
+                        _issues = const [];
+                      });
+                    },
+            ),
+            if (_seedStrategy == ModificationSeedStrategy.specified) ...[
+              const SizedBox(height: 8),
+              TextField(
+                controller: _specifiedSeed,
+                enabled: !_applying && !_proposing,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: l10n.promptPatch_seedValue,
+                  isDense: true,
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+            ],
+            const SizedBox(height: 5),
+            Text(
+              summary,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
       ),
@@ -431,6 +521,24 @@ class _PromptPatchWorkbenchDialogState
   }
 
   Future<void> _apply() async {
+    int? specifiedSeed;
+    if (_seedStrategy == ModificationSeedStrategy.specified) {
+      specifiedSeed = int.tryParse(_specifiedSeed.text.trim());
+      if (specifiedSeed == null ||
+          specifiedSeed < 0 ||
+          specifiedSeed > ModificationSeedStrategyResolver.maxSeed) {
+        setState(
+          () => _issues = const [
+            PromptPatchValidationIssue(
+              operationId: 'seed',
+              code: PromptPatchIssueCode.invalid,
+              message: '指定 Seed 必须是 0 到 4294967295 之间的整数',
+            ),
+          ],
+        );
+        return;
+      }
+    }
     final operations = <PromptPatchOperation>[];
     for (final draft in _drafts) {
       operations.add(_toOperation(draft));
@@ -449,7 +557,12 @@ class _PromptPatchWorkbenchDialogState
     try {
       final result = await ref
           .read(promptRecipeApplicationServiceProvider)
-          .applyPatch(widget.recipe.id, operations);
+          .applyPatch(
+            widget.recipe.id,
+            operations,
+            seedStrategy: _seedStrategy,
+            specifiedSeed: specifiedSeed,
+          );
       if (!mounted) return;
       if (result == null) {
         setState(() {
@@ -522,6 +635,17 @@ class _PromptPatchWorkbenchDialogState
     } finally {
       if (mounted) setState(() => _proposing = false);
     }
+  }
+
+  Future<void> _openBatchPlanner() async {
+    final added = await PromptBatchPlanWorkbenchDialog.show(
+      context,
+      widget.recipe,
+    );
+    if (!mounted || added == null || added <= 0) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('已将 $added 个计划项加入串行队列')));
   }
 
   PromptPatchOperation _toOperation(_PatchDraft draft) {

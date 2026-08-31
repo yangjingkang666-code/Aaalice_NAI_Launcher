@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nai_launcher/data/models/image/image_params.dart';
+import 'package:nai_launcher/data/models/recipe/modification_seed_strategy.dart';
 import 'package:nai_launcher/data/models/recipe/prompt_recipe.dart';
 import 'package:nai_launcher/data/services/prompt_patch_service.dart';
 
@@ -158,6 +159,21 @@ void main() {
       PromptPatchIssueCode.locked,
       PromptPatchIssueCode.locked,
     ]);
+  });
+
+  test('seed strategy is recorded and reversible as an explicit parameter', () {
+    final applied = PromptPatchService.apply(
+      _recipe(),
+      const [],
+      seedStrategy: ModificationSeedStrategy.specified,
+      specifiedSeed: 987,
+    );
+    expect(applied.recipe.request.params.seed, 987);
+    expect(applied.applied.single.target, 'request:seed');
+    expect(applied.inverse.single.explicit, isTrue);
+
+    final restored = PromptPatchService.apply(applied.recipe, applied.inverse);
+    expect(restored.recipe.request.params.seed, _recipe().request.params.seed);
   });
 
   test('rejects missing tokens, duplicate claims, and invalid parameters', () {

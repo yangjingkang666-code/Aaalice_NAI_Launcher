@@ -38,11 +38,14 @@ NAI Launcher is built for people who use NovelAI regularly: generate images, ref
 - **Generation and editing**: text-to-image, image-to-image, Inpaint, Focused Inpaint, Outpaint, and upscale/enhance workflows.
 - **References and characters**: Vibe Transfer, Precise Reference, multi-character prompts, reference images, and independent negative prompts.
 - **Prompt workspace**: tag autocomplete, weight syntax, token counts, pinned words, random tag libraries, and prompt import/export.
+- **Reviewable Prompt optimization**: generated results persist structured semantic entries; one “Organize with AI” action classifies unknown phrases and supplies Chinese reading translations while local tags and manual edits stay authoritative.
+- **Safe edits and batch planning**: the Prompt Patch workbench protects identity, parameters, and references and offers explicit reuse/random/specified seed behavior; AI batch planning proposes tasks only, which enter the serial queue after per-item review.
 
 ### 🗂️ Organize
 
 - **Local gallery**: scan local artwork, search Prompts and metadata, organize categories, favorites, and collections, and perform batch operations.
 - **Generation queue**: submit batches, pause/resume, reorder, handle failures, and track progress.
+- **Reproducible queue tasks**: an implicit random seed is resolved once at queue admission and reused after retries or restarts.
 - **Image details**: inspect generation parameters, positive/negative prompts, and character prompts; copy selected content back to the generator or tag library.
 - **Statistics**: review creation habits by size, sampler, time, and Anlas usage.
 
@@ -55,6 +58,7 @@ NAI Launcher is built for people who use NovelAI regularly: generate images, ref
 ### 🤝 Connect
 
 - **Agent Chat**: use the generation sidebar or mobile drawer to search tags, organize Prompts, inspect history, and prepare generations; every operation that may consume Anlas requires separate confirmation.
+- **Image reverse-prompt evidence**: optionally run JoyTag and WD EVA02 sequentially as local evidence before the configured image model integrates the result; failures remain auditable and never start generation automatically.
 - **Desktop integrations**: connect Krita Bridge and local ComfyUI workflows to your existing tools.
 - **Sync and backup**: manually push and pull selected data through GitHub or WebDAV; credentials and NovelAI Tokens are excluded from backups.
 
@@ -202,6 +206,7 @@ NAI Launcher does not host your account or artwork on a project-operated server.
 | Generation, image-to-image, editing, Vibe encoding | NovelAI, including the relevant Prompt, parameters, and reference/source images. |
 | Online gallery search and downloads | The third-party gallery you selected; availability, rate limits, and content rules belong to each site. |
 | AI translation or Agent Chat | The model service you configured; conversations, attached images, and tool results needed for the task may incur service charges. |
+| Image reverse prompting | Only the image you explicitly select is sent to your configured vision model; JoyTag/WD EVA02 tag inference stays local. |
 | Sync and backup | The GitHub or WebDAV storage you configured; only the data categories you explicitly select are uploaded. |
 
 - NovelAI Tokens, WebDAV passwords, and GitHub Tokens are stored in the device secure store and are not included in backups.

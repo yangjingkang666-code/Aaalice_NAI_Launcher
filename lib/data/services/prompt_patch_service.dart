@@ -1,5 +1,7 @@
 import '../models/image/image_params.dart';
 import '../models/recipe/prompt_recipe.dart';
+import '../models/recipe/modification_seed_strategy.dart';
+import 'prompt_semantic_entry_builder.dart';
 
 /// Lock policy used when validating assistant- or user-authored Prompt Patch
 /// operations. The strict policy mirrors the safety defaults of the web
@@ -398,6 +400,8 @@ class PromptPatchService {
     PromptPatchLockPolicy policy = PromptPatchLockPolicy.strict,
     String? id,
     DateTime? createdAt,
+    ModificationSeedStrategy seedStrategy = ModificationSeedStrategy.base,
+    int? specifiedSeed,
   }) {
     final validation = validate(recipe, operations, policy: policy);
     if (!validation.isValid) throw PromptPatchException(validation);
@@ -407,6 +411,41 @@ class PromptPatchService {
     final applied = <PromptPatchOperation>[];
     final inverse = <PromptPatchOperation>[];
     var promptChanged = false;
+
+    final originalSeed = params.seed;
+    params = ModificationSeedStrategyResolver.apply(
+      params,
+      seedStrategy,
+      specifiedSeed: specifiedSeed,
+    );
+    if (seedStrategy != ModificationSeedStrategy.base) {
+      final strategyOperation = PromptPatchOperation(
+        id: 'seed-strategy-${seedStrategy.name}-${params.seed}',
+        op: 'parameter',
+        target: 'request:seed',
+        before: originalSeed,
+        after: params.seed,
+        reason: seedStrategy.label,
+        evidenceIds: const [],
+        confidence: 1,
+        explicit: true,
+      );
+      applied.add(strategyOperation);
+      inverse.insert(
+        0,
+        PromptPatchOperation(
+          id: '${strategyOperation.id}:inverse',
+          op: 'parameter',
+          target: 'request:seed',
+          before: params.seed,
+          after: originalSeed,
+          reason: '撤销 ${strategyOperation.id}',
+          evidenceIds: const [],
+          confidence: 1,
+          explicit: true,
+        ),
+      );
+    }
 
     for (final operation in validation.valid) {
       applied.add(operation);
@@ -450,16 +489,20 @@ class PromptPatchService {
       );
     }
 
+    final semantic = promptChanged
+        ? PromptSemanticEntryBuilder.buildSync(
+            params.prompt,
+            negativePrompt: params.negativePrompt,
+          )
+        : null;
     final child = PromptRecipe.create(
       id: id,
       parentRecipeId: recipe.id,
       sourceGalleryItemId: recipe.sourceGalleryItemId,
       params: params,
       characters: characters,
-      mainPromptEntries: promptChanged ? const [] : recipe.mainPromptEntries,
-      structuredMain: promptChanged
-          ? StructuredPrompt.empty()
-          : recipe.structuredMain,
+      mainPromptEntries: semantic?.entries ?? recipe.mainPromptEntries,
+      structuredMain: semantic?.structured ?? recipe.structuredMain,
       userInstruction: recipe.userInstruction,
       retrievalEvidence: recipe.retrievalEvidence,
       proposedPatch: const [],

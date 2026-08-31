@@ -29,6 +29,26 @@ class PromptSemanticEntry {
   final double confidence;
   final String kind;
 
+  PromptSemanticEntry copyWith({
+    String? id,
+    String? text,
+    String? category,
+    String? source,
+    bool? localTagHit,
+    double? confidence,
+    String? kind,
+  }) {
+    return PromptSemanticEntry(
+      id: id ?? this.id,
+      text: text ?? this.text,
+      category: category ?? this.category,
+      source: source ?? this.source,
+      localTagHit: localTagHit ?? this.localTagHit,
+      confidence: confidence ?? this.confidence,
+      kind: kind ?? this.kind,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'text': text,

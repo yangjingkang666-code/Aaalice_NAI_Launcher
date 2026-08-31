@@ -2783,6 +2783,36 @@ abstract class AppLocalizations {
   /// **'Applied to main prompt'**
   String get prompt_appliedToMainPrompt;
 
+  /// No description provided for @prompt_semanticOrganize.
+  ///
+  /// In en, this message translates to:
+  /// **'Organize Prompt with AI'**
+  String get prompt_semanticOrganize;
+
+  /// No description provided for @prompt_semanticOrganizeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Translate and classify unknown phrases together without rewriting English'**
+  String get prompt_semanticOrganizeSubtitle;
+
+  /// No description provided for @prompt_semanticNoPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a main prompt first'**
+  String get prompt_semanticNoPrompt;
+
+  /// No description provided for @prompt_semanticNoUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'No unknown phrases need AI organization'**
+  String get prompt_semanticNoUnknown;
+
+  /// No description provided for @prompt_semanticAiFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'AI organization failed'**
+  String get prompt_semanticAiFailed;
+
   /// No description provided for @prompt_inputPrompt.
   ///
   /// In en, this message translates to:
@@ -11720,7 +11750,7 @@ abstract class AppLocalizations {
   /// No description provided for @reversePrompt_needImageAndMethod.
   ///
   /// In en, this message translates to:
-  /// **'Add an image and enable at least ONNX tagger or LLM reverse prompt'**
+  /// **'Add an image and enable at least an ONNX tagger, dual local taggers, or LLM reverse prompt'**
   String get reversePrompt_needImageAndMethod;
 
   /// No description provided for @reversePrompt_stagePreparing.
@@ -11764,6 +11794,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No ONNX tagger model found. Configure the model folder in Settings first'**
   String get reversePrompt_noOnnxModel;
+
+  /// No description provided for @reversePrompt_dualLocalTagger.
+  ///
+  /// In en, this message translates to:
+  /// **'JoyTag + WD EVA02'**
+  String get reversePrompt_dualLocalTagger;
+
+  /// No description provided for @reversePrompt_dualJoyTag.
+  ///
+  /// In en, this message translates to:
+  /// **'JoyTag model'**
+  String get reversePrompt_dualJoyTag;
+
+  /// No description provided for @reversePrompt_dualWdEva02.
+  ///
+  /// In en, this message translates to:
+  /// **'WD EVA02 model'**
+  String get reversePrompt_dualWdEva02;
+
+  /// No description provided for @reversePrompt_dualLocalTaggerHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Import and configure the matching ONNX models in Settings'**
+  String get reversePrompt_dualLocalTaggerHint;
+
+  /// No description provided for @reversePrompt_dualLocalTaggerDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The two models run sequentially and provide local candidate evidence; the cloud vision model still performs the final integration.'**
+  String get reversePrompt_dualLocalTaggerDescription;
+
+  /// No description provided for @reversePrompt_stageDualLocalTagger.
+  ///
+  /// In en, this message translates to:
+  /// **'Running local dual taggers'**
+  String get reversePrompt_stageDualLocalTagger;
+
+  /// No description provided for @reversePrompt_noDualTaggerModels.
+  ///
+  /// In en, this message translates to:
+  /// **'JoyTag and WD EVA02 ONNX models were not found'**
+  String get reversePrompt_noDualTaggerModels;
+
+  /// No description provided for @reversePrompt_dualTaggerFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Both local taggers failed'**
+  String get reversePrompt_dualTaggerFailed;
 
   /// No description provided for @promptAssistant_translateProcessing.
   ///
@@ -24085,6 +24163,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'AI proposal failed: {error}'**
   String promptPatch_aiFailed(String error);
+
+  /// No description provided for @promptPatch_seedStrategy.
+  ///
+  /// In en, this message translates to:
+  /// **'Modification seed strategy'**
+  String get promptPatch_seedStrategy;
+
+  /// No description provided for @promptPatch_seedBase.
+  ///
+  /// In en, this message translates to:
+  /// **'Reuse base image seed'**
+  String get promptPatch_seedBase;
+
+  /// No description provided for @promptPatch_seedRandom.
+  ///
+  /// In en, this message translates to:
+  /// **'Random seed (once when queued)'**
+  String get promptPatch_seedRandom;
+
+  /// No description provided for @promptPatch_seedSpecified.
+  ///
+  /// In en, this message translates to:
+  /// **'Use specified seed'**
+  String get promptPatch_seedSpecified;
+
+  /// No description provided for @promptPatch_seedValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Seed value (0–4294967295)'**
+  String get promptPatch_seedValue;
+
+  /// No description provided for @promptPatch_seedSummaryBase.
+  ///
+  /// In en, this message translates to:
+  /// **'The base image seed will be reused'**
+  String get promptPatch_seedSummaryBase;
+
+  /// No description provided for @promptPatch_seedSummaryRandom.
+  ///
+  /// In en, this message translates to:
+  /// **'A seed will be generated once when queued and reused on retry'**
+  String get promptPatch_seedSummaryRandom;
+
+  /// No description provided for @promptPatch_seedSummarySpecified.
+  ///
+  /// In en, this message translates to:
+  /// **'The specified seed will be used: {seed}'**
+  String promptPatch_seedSummarySpecified(int seed);
+
+  /// No description provided for @promptBatch_title.
+  ///
+  /// In en, this message translates to:
+  /// **'AI batch planner'**
+  String get promptBatch_title;
+
+  /// No description provided for @promptBatch_reviewHint.
+  ///
+  /// In en, this message translates to:
+  /// **'AI proposes reviewable pose/scene variants only. Tasks enter the serial queue only after confirmation; generation never starts automatically.'**
+  String get promptBatch_reviewHint;
+
+  /// No description provided for @promptBatch_instruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Task request'**
+  String get promptBatch_instruction;
+
+  /// No description provided for @promptBatch_count.
+  ///
+  /// In en, this message translates to:
+  /// **'Count'**
+  String get promptBatch_count;
+
+  /// No description provided for @promptBatch_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a goal, then ask the assistant to propose a plan'**
+  String get promptBatch_empty;
+
+  /// No description provided for @promptBatch_propose.
+  ///
+  /// In en, this message translates to:
+  /// **'Propose plan'**
+  String get promptBatch_propose;
+
+  /// No description provided for @promptBatch_addSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Add selected tasks'**
+  String get promptBatch_addSelected;
+
+  /// No description provided for @promptBatch_needInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a batch task request first'**
+  String get promptBatch_needInstruction;
+
+  /// No description provided for @promptBatch_failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch planning failed: {error}'**
+  String promptBatch_failed(String error);
+
+  /// No description provided for @promptBatch_invalidSeed.
+  ///
+  /// In en, this message translates to:
+  /// **'The specified seed must be an integer from 0 to 4294967295'**
+  String get promptBatch_invalidSeed;
+
+  /// No description provided for @promptBatch_queueCapacity.
+  ///
+  /// In en, this message translates to:
+  /// **'Only {count} queue slot(s) remain; reduce the plan'**
+  String promptBatch_queueCapacity(int count);
+
+  /// No description provided for @promptBatch_partialAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Some tasks could not be added to the queue'**
+  String get promptBatch_partialAdd;
+
+  /// No description provided for @promptBatch_editItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit plan item'**
+  String get promptBatch_editItem;
+
+  /// No description provided for @promptBatch_summary.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get promptBatch_summary;
 
   /// No description provided for @promptRecipe_load.
   ///

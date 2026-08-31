@@ -7,6 +7,7 @@ import 'package:image/image.dart' as img;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/constants/model_capabilities.dart';
+import '../../core/autocomplete/autocomplete_providers.dart';
 import '../../core/services/android_generation_foreground_service.dart';
 import '../../core/services/anlas_calculator.dart';
 import '../../core/services/character_conversion_service.dart';
@@ -29,6 +30,7 @@ import '../../data/models/recipe/prompt_recipe.dart';
 import '../../data/repositories/gallery_folder_repository.dart';
 import '../../data/repositories/prompt_recipe_repository.dart';
 import '../../data/services/alias_resolver_service.dart';
+import '../../data/services/prompt_semantic_entry_builder.dart';
 import '../../data/services/statistics_cache_service.dart';
 import '../services/generation_history_storage_service.dart';
 import 'auth_provider.dart';
@@ -46,6 +48,7 @@ import 'generation/image_workflow_controller.dart';
 import 'image_save_settings_provider.dart';
 import 'local_gallery_provider.dart';
 import 'prompt_config_provider.dart';
+import 'prompt_semantic_provider.dart';
 import 'quality_preset_provider.dart';
 import 'queue_execution_provider.dart';
 import 'subscription_provider.dart';
@@ -101,6 +104,7 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
   ImageComparisonSource? _activeComparisonSource;
   ImageParams? _activeRecipeParams;
   List<RecipeCharacter> _activeRecipeCharacters = const [];
+  List<PromptSemanticEntry> _activeRecipeSemanticEntries = const [];
   bool _isDisposed = false;
   int _lifecycleEpoch = 0;
 
@@ -113,6 +117,7 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
       _activeComparisonSource = null;
       _activeRecipeParams = null;
       _activeRecipeCharacters = const [];
+      _activeRecipeSemanticEntries = const [];
       final invocationSettled = _generationInvocationSettled;
       _generationInvocationSettled = null;
       if (invocationSettled != null && !invocationSettled.isCompleted) {
@@ -142,6 +147,9 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
         recipeRepository: ref.read(generationSessionPersistenceEnabledProvider)
             ? ref.read(promptRecipeRepositoryProvider)
             : null,
+        resolveExactTags: ref
+            .read(tagCatalogRepositoryProvider)
+            .resolveExactTags,
       ),
     );
   }
@@ -414,6 +422,7 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
         _activeComparisonSource = null;
         _activeRecipeParams = null;
         _activeRecipeCharacters = const [];
+        _activeRecipeSemanticEntries = const [];
       }
       if (!invocationSettled.isCompleted) {
         invocationSettled.complete();
@@ -514,6 +523,15 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
             : null;
         _activeRecipeParams = params;
         _activeRecipeCharacters = _recipeCharactersSnapshot();
+        final semanticDraft = ref.read(promptSemanticDraftProvider);
+        // Fixed tags, alias expansion and preset resolution can change the
+        // final wire prompt. Rebuild against that prompt while carrying over
+        // matching manual/AI classifications instead of dropping the draft
+        // merely because the final string is not byte-for-byte identical.
+        _activeRecipeSemanticEntries = PromptSemanticEntryBuilder.buildSync(
+          params.prompt,
+          existingEntries: semanticDraft.entries,
+        ).entries;
         state = state.copyWith(
           currentImages: [],
           status: GenerationStatus.generating,
@@ -641,6 +659,7 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
         final recipe = await lifecycle.saveRecipe(
           params: _activeRecipeParams ?? params,
           characters: _activeRecipeCharacters,
+          mainPromptEntries: _activeRecipeSemanticEntries,
         );
         if (recipe != null) {
           images = [

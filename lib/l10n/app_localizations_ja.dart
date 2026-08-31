@@ -1447,6 +1447,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get prompt_appliedToMainPrompt => 'メイン プロンプトに適用されます';
 
   @override
+  String get prompt_semanticOrganize => 'AI で Prompt を整理';
+
+  @override
+  String get prompt_semanticOrganizeSubtitle => '英語を変更せず、未知のフレーズを翻訳して分類します';
+
+  @override
+  String get prompt_semanticNoPrompt => '先にメインプロンプトを入力してください';
+
+  @override
+  String get prompt_semanticNoUnknown => 'AI で整理する未知のフレーズはありません';
+
+  @override
+  String get prompt_semanticAiFailed => 'AI 整理に失敗しました';
+
+  @override
   String get prompt_inputPrompt => '生成したい画像を説明';
 
   @override
@@ -6430,7 +6445,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get reversePrompt_needImageAndMethod =>
-      '画像を追加し、少なくとも ONNX タガーまたは LLM リバース プロンプトを有効にしてください';
+      '画像を追加し、ONNX タガー、ローカルデュアルタグ、または LLM リバースを少なくとも 1 つ有効にしてください';
 
   @override
   String get reversePrompt_stagePreparing => '逆プロンプトを準備しています';
@@ -6455,6 +6470,33 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get reversePrompt_noOnnxModel =>
       'ONNX タガー モデルが見つかりません。最初に設定でモデルフォルダーを構成します';
+
+  @override
+  String get reversePrompt_dualLocalTagger => 'JoyTag + WD EVA02';
+
+  @override
+  String get reversePrompt_dualJoyTag => 'JoyTag モデル';
+
+  @override
+  String get reversePrompt_dualWdEva02 => 'WD EVA02 モデル';
+
+  @override
+  String get reversePrompt_dualLocalTaggerHint =>
+      '設定で対応する ONNX モデルをインポートして構成してください';
+
+  @override
+  String get reversePrompt_dualLocalTaggerDescription =>
+      '2 つのモデルを順番に実行してローカル候補を提供します。最終統合はクラウド画像モデルが行います。';
+
+  @override
+  String get reversePrompt_stageDualLocalTagger => 'ローカルデュアルタグを実行中';
+
+  @override
+  String get reversePrompt_noDualTaggerModels =>
+      'JoyTag と WD EVA02 の ONNX モデルが見つかりません';
+
+  @override
+  String get reversePrompt_dualTaggerFailed => 'ローカルタグモデルが両方とも失敗しました';
 
   @override
   String get promptAssistant_translateProcessing => '翻訳中';
@@ -13487,6 +13529,79 @@ class AppLocalizationsJa extends AppLocalizations {
   String promptPatch_aiFailed(String error) {
     return 'AI 提案に失敗しました: $error';
   }
+
+  @override
+  String get promptPatch_seedStrategy => '変更時の Seed 戦略';
+
+  @override
+  String get promptPatch_seedBase => 'ベース画像の Seed を再利用';
+
+  @override
+  String get promptPatch_seedRandom => 'ランダム Seed（キュー追加時に一度だけ）';
+
+  @override
+  String get promptPatch_seedSpecified => '指定した Seed を使用';
+
+  @override
+  String get promptPatch_seedValue => 'Seed 値（0–4294967295）';
+
+  @override
+  String get promptPatch_seedSummaryBase => 'ベース画像の Seed を再利用します';
+
+  @override
+  String get promptPatch_seedSummaryRandom => 'キュー追加時に一度だけ生成し、再試行でも再利用します';
+
+  @override
+  String promptPatch_seedSummarySpecified(int seed) {
+    return '指定した Seed を使用します: $seed';
+  }
+
+  @override
+  String get promptBatch_title => 'AI バッチ計画';
+
+  @override
+  String get promptBatch_reviewHint =>
+      'AI は確認可能なポーズ/シーンの差分だけを提案します。確認後に直列キューへ追加し、自動生成は開始しません。';
+
+  @override
+  String get promptBatch_instruction => 'タスクの依頼';
+
+  @override
+  String get promptBatch_count => '数';
+
+  @override
+  String get promptBatch_empty => '目標を入力して計画を提案させてください';
+
+  @override
+  String get promptBatch_propose => '計画を提案';
+
+  @override
+  String get promptBatch_addSelected => '選択したタスクを追加';
+
+  @override
+  String get promptBatch_needInstruction => 'バッチの依頼を入力してください';
+
+  @override
+  String promptBatch_failed(String error) {
+    return 'バッチ計画に失敗しました: $error';
+  }
+
+  @override
+  String get promptBatch_invalidSeed => 'Seed は 0 から 4294967295 の整数で指定してください';
+
+  @override
+  String promptBatch_queueCapacity(int count) {
+    return 'キューの空きは $count 件です。計画を減らしてください';
+  }
+
+  @override
+  String get promptBatch_partialAdd => '一部のタスクをキューに追加できませんでした';
+
+  @override
+  String get promptBatch_editItem => '計画項目を編集';
+
+  @override
+  String get promptBatch_summary => '概要';
 
   @override
   String get promptRecipe_load => 'レシピを読み込む';

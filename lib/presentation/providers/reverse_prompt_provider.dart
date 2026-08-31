@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/storage_keys.dart';
 import '../../core/storage/local_storage_service.dart';
 import '../../data/models/character/character_prompt.dart';
+import '../../data/services/dual_local_onnx_tagger_service.dart';
 import '../../data/services/local_onnx_model_service.dart';
 import '../../data/services/local_onnx_tagger_service.dart';
 import '../prompt_assistant/models/prompt_assistant_models.dart';
@@ -14,18 +15,21 @@ import '../utils/reverse_prompt_image_normalizer.dart';
 
 final reversePromptProvider =
     StateNotifierProvider<ReversePromptNotifier, ReversePromptState>((ref) {
-  return ReversePromptNotifier(ref);
-});
+      return ReversePromptNotifier(ref);
+    });
 
-final reversePromptCharacterProvider = StateNotifierProvider<
-    ReversePromptCharacterNotifier, CharacterPromptConfig>((ref) {
-  return ReversePromptCharacterNotifier(ref);
-});
+final reversePromptCharacterProvider =
+    StateNotifierProvider<
+      ReversePromptCharacterNotifier,
+      CharacterPromptConfig
+    >((ref) {
+      return ReversePromptCharacterNotifier(ref);
+    });
 
 class ReversePromptCharacterNotifier
     extends StateNotifier<CharacterPromptConfig> {
   ReversePromptCharacterNotifier(this._ref)
-      : super(const CharacterPromptConfig()) {
+    : super(const CharacterPromptConfig()) {
     _load();
   }
 
@@ -43,8 +47,9 @@ class ReversePromptCharacterNotifier
   }
 
   void _load() {
-    final raw = _storage
-        .getSetting<String>(StorageKeys.reversePromptCharacterConfigJson);
+    final raw = _storage.getSetting<String>(
+      StorageKeys.reversePromptCharacterConfigJson,
+    );
     if (raw == null || raw.isEmpty) {
       return;
     }
@@ -65,9 +70,7 @@ class ReversePromptCharacterNotifier
 
   void setReplacementCharacter(CharacterPrompt character) {
     state = CharacterPromptConfig(
-      characters: [
-        character.copyWith(enabled: true),
-      ],
+      characters: [character.copyWith(enabled: true)],
     );
     _save();
   }
@@ -79,11 +82,7 @@ class ReversePromptCharacterNotifier
 }
 
 class ReversePromptImage {
-  const ReversePromptImage({
-    required this.id,
-    required this.bytes,
-    this.name,
-  });
+  const ReversePromptImage({required this.id, required this.bytes, this.name});
 
   final String id;
   final Uint8List bytes;
@@ -93,6 +92,7 @@ class ReversePromptImage {
 enum ReversePromptProcessingStage {
   preparing,
   onnxTagger,
+  dualLocalTagger,
   llmReverse,
   characterReplace,
 }
@@ -107,13 +107,17 @@ class ReversePromptState {
   const ReversePromptState({
     this.images = const [],
     this.useOnnxTagger = true,
+    this.useDualLocalTagger = false,
     this.useLlmReverse = true,
     this.useCharacterReplace = false,
     this.selectedTaggerModelPath,
+    this.selectedJoyTaggerModelPath,
+    this.selectedWdEva02ModelPath,
     this.selectedCharacterId,
     this.taggerGeneralThreshold = 0.35,
     this.taggerCharacterThreshold = 0.35,
     this.taggerPrompt = '',
+    this.dualTaggerPrompt = '',
     this.llmPrompt = '',
     this.characterReplacePrompt = '',
     this.finalPrompt = '',
@@ -124,13 +128,17 @@ class ReversePromptState {
 
   final List<ReversePromptImage> images;
   final bool useOnnxTagger;
+  final bool useDualLocalTagger;
   final bool useLlmReverse;
   final bool useCharacterReplace;
   final String? selectedTaggerModelPath;
+  final String? selectedJoyTaggerModelPath;
+  final String? selectedWdEva02ModelPath;
   final String? selectedCharacterId;
   final double taggerGeneralThreshold;
   final double taggerCharacterThreshold;
   final String taggerPrompt;
+  final String dualTaggerPrompt;
   final String llmPrompt;
   final String characterReplacePrompt;
   final String finalPrompt;
@@ -138,20 +146,28 @@ class ReversePromptState {
   final ReversePromptProcessingStage? processingStage;
   final String? error;
 
-  bool get canRun => images.isNotEmpty && (useOnnxTagger || useLlmReverse);
+  bool get canRun =>
+      images.isNotEmpty &&
+      (useOnnxTagger || useDualLocalTagger || useLlmReverse);
 
   ReversePromptState copyWith({
     List<ReversePromptImage>? images,
     bool? useOnnxTagger,
+    bool? useDualLocalTagger,
     bool? useLlmReverse,
     bool? useCharacterReplace,
     String? selectedTaggerModelPath,
     bool clearSelectedTaggerModelPath = false,
+    String? selectedJoyTaggerModelPath,
+    bool clearSelectedJoyTaggerModelPath = false,
+    String? selectedWdEva02ModelPath,
+    bool clearSelectedWdEva02ModelPath = false,
     String? selectedCharacterId,
     bool clearSelectedCharacterId = false,
     double? taggerGeneralThreshold,
     double? taggerCharacterThreshold,
     String? taggerPrompt,
+    String? dualTaggerPrompt,
     String? llmPrompt,
     String? characterReplacePrompt,
     String? finalPrompt,
@@ -164,11 +180,18 @@ class ReversePromptState {
     return ReversePromptState(
       images: images ?? this.images,
       useOnnxTagger: useOnnxTagger ?? this.useOnnxTagger,
+      useDualLocalTagger: useDualLocalTagger ?? this.useDualLocalTagger,
       useLlmReverse: useLlmReverse ?? this.useLlmReverse,
       useCharacterReplace: useCharacterReplace ?? this.useCharacterReplace,
       selectedTaggerModelPath: clearSelectedTaggerModelPath
           ? null
           : selectedTaggerModelPath ?? this.selectedTaggerModelPath,
+      selectedJoyTaggerModelPath: clearSelectedJoyTaggerModelPath
+          ? null
+          : selectedJoyTaggerModelPath ?? this.selectedJoyTaggerModelPath,
+      selectedWdEva02ModelPath: clearSelectedWdEva02ModelPath
+          ? null
+          : selectedWdEva02ModelPath ?? this.selectedWdEva02ModelPath,
       selectedCharacterId: clearSelectedCharacterId
           ? null
           : selectedCharacterId ?? this.selectedCharacterId,
@@ -177,44 +200,58 @@ class ReversePromptState {
       taggerCharacterThreshold:
           taggerCharacterThreshold ?? this.taggerCharacterThreshold,
       taggerPrompt: taggerPrompt ?? this.taggerPrompt,
+      dualTaggerPrompt: dualTaggerPrompt ?? this.dualTaggerPrompt,
       llmPrompt: llmPrompt ?? this.llmPrompt,
       characterReplacePrompt:
           characterReplacePrompt ?? this.characterReplacePrompt,
       finalPrompt: finalPrompt ?? this.finalPrompt,
       isProcessing: isProcessing ?? this.isProcessing,
-      processingStage:
-          clearProcessingStage ? null : processingStage ?? this.processingStage,
+      processingStage: clearProcessingStage
+          ? null
+          : processingStage ?? this.processingStage,
       error: clearError ? null : error ?? this.error,
     );
   }
 
   Map<String, dynamic> toPersistedJson() => {
-        'useOnnxTagger': useOnnxTagger,
-        'useLlmReverse': useLlmReverse,
-        'useCharacterReplace': useCharacterReplace,
-        'selectedTaggerModelPath': selectedTaggerModelPath,
-        'selectedCharacterId': selectedCharacterId,
-        'taggerGeneralThreshold': taggerGeneralThreshold,
-        'taggerCharacterThreshold': taggerCharacterThreshold,
-      };
+    'useOnnxTagger': useOnnxTagger,
+    'useDualLocalTagger': useDualLocalTagger,
+    'useLlmReverse': useLlmReverse,
+    'useCharacterReplace': useCharacterReplace,
+    'selectedTaggerModelPath': selectedTaggerModelPath,
+    'selectedJoyTaggerModelPath': selectedJoyTaggerModelPath,
+    'selectedWdEva02ModelPath': selectedWdEva02ModelPath,
+    'selectedCharacterId': selectedCharacterId,
+    'taggerGeneralThreshold': taggerGeneralThreshold,
+    'taggerCharacterThreshold': taggerCharacterThreshold,
+  };
 
   factory ReversePromptState.fromPersistedJson(Map<String, dynamic> json) {
     final useOnnx = json['useOnnxTagger'] as bool? ?? true;
+    final useDual = json['useDualLocalTagger'] as bool? ?? false;
     final useLlm = json['useLlmReverse'] as bool? ?? true;
+    // Dual local tagging replaces the single-model ONNX stage. Older
+    // persisted settings may contain both flags, so normalize the mutually
+    // exclusive local choices while keeping at least one usable method.
+    final normalizedOnnx = useDual ? false : (useOnnx || !useLlm);
+    final normalizedLlm = useLlm || (!normalizedOnnx && !useDual);
     return ReversePromptState(
-      useOnnxTagger: useOnnx || !useLlm,
-      useLlmReverse: useLlm || !useOnnx,
+      useOnnxTagger: normalizedOnnx,
+      useDualLocalTagger: useDual,
+      useLlmReverse: normalizedLlm,
       useCharacterReplace: json['useCharacterReplace'] as bool? ?? false,
       selectedTaggerModelPath: json['selectedTaggerModelPath'] as String?,
+      selectedJoyTaggerModelPath: json['selectedJoyTaggerModelPath'] as String?,
+      selectedWdEva02ModelPath: json['selectedWdEva02ModelPath'] as String?,
       selectedCharacterId: json['selectedCharacterId'] as String?,
       taggerGeneralThreshold:
           (json['taggerGeneralThreshold'] as num?)?.toDouble() ??
-              (json['taggerThreshold'] as num?)?.toDouble() ??
-              0.35,
+          (json['taggerThreshold'] as num?)?.toDouble() ??
+          0.35,
       taggerCharacterThreshold:
           (json['taggerCharacterThreshold'] as num?)?.toDouble() ??
-              (json['taggerThreshold'] as num?)?.toDouble() ??
-              0.35,
+          (json['taggerThreshold'] as num?)?.toDouble() ??
+          0.35,
     );
   }
 }
@@ -255,10 +292,7 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
       bytes: normalizedBytes,
       name: name,
     );
-    state = state.copyWith(
-      images: [...state.images, next],
-      clearError: true,
-    );
+    state = state.copyWith(images: [...state.images, next], clearError: true);
   }
 
   Future<Uint8List> _normalizeImage(Uint8List bytes) async {
@@ -270,8 +304,9 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
   }
 
   void removeImage(String id) {
-    state =
-        state.copyWith(images: state.images.where((e) => e.id != id).toList());
+    state = state.copyWith(
+      images: state.images.where((e) => e.id != id).toList(),
+    );
   }
 
   void clearImages() {
@@ -279,16 +314,31 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
   }
 
   Future<void> setUseOnnxTagger(bool value) async {
-    if (!value && !state.useLlmReverse) {
+    if (!value && !state.useLlmReverse && !state.useDualLocalTagger) {
       state = state.copyWith(useOnnxTagger: true);
       return;
     }
-    state = state.copyWith(useOnnxTagger: value);
+    state = state.copyWith(
+      useOnnxTagger: value,
+      useDualLocalTagger: value ? false : state.useDualLocalTagger,
+    );
+    await _save();
+  }
+
+  Future<void> setUseDualLocalTagger(bool value) async {
+    if (!value && !state.useLlmReverse && !state.useOnnxTagger) {
+      state = state.copyWith(useDualLocalTagger: true);
+      return;
+    }
+    state = state.copyWith(
+      useDualLocalTagger: value,
+      useOnnxTagger: value ? false : state.useOnnxTagger,
+    );
     await _save();
   }
 
   Future<void> setUseLlmReverse(bool value) async {
-    if (!value && !state.useOnnxTagger) {
+    if (!value && !state.useOnnxTagger && !state.useDualLocalTagger) {
       state = state.copyWith(useLlmReverse: true);
       return;
     }
@@ -305,6 +355,22 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
     state = state.copyWith(
       selectedTaggerModelPath: value,
       clearSelectedTaggerModelPath: value == null,
+    );
+    await _save();
+  }
+
+  Future<void> setSelectedJoyTaggerModelPath(String? value) async {
+    state = state.copyWith(
+      selectedJoyTaggerModelPath: value,
+      clearSelectedJoyTaggerModelPath: value == null,
+    );
+    await _save();
+  }
+
+  Future<void> setSelectedWdEva02ModelPath(String? value) async {
+    state = state.copyWith(
+      selectedWdEva02ModelPath: value,
+      clearSelectedWdEva02ModelPath: value == null,
     );
     await _save();
   }
@@ -341,6 +407,7 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
       isProcessing: true,
       processingStage: ReversePromptProcessingStage.preparing,
       taggerPrompt: '',
+      dualTaggerPrompt: '',
       llmPrompt: '',
       characterReplacePrompt: '',
       finalPrompt: '',
@@ -349,13 +416,40 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
 
     try {
       var currentPrompt = '';
+      var localEvidence = '';
       final image = state.images.first;
-      if (state.useOnnxTagger) {
+      if (state.useDualLocalTagger) {
+        state = state.copyWith(
+          processingStage: ReversePromptProcessingStage.dualLocalTagger,
+        );
+        final models = await _resolveDualTaggerModels();
+        final result = await _ref
+            .read(dualLocalOnnxTaggerServiceProvider)
+            .tagImage(
+              imageBytes: image.bytes,
+              models: models,
+              generalThreshold: state.taggerGeneralThreshold,
+              characterThreshold: state.taggerCharacterThreshold,
+            );
+        currentPrompt = result.combinedPrompt;
+        localEvidence = result.auditText;
+        state = state.copyWith(
+          dualTaggerPrompt: result.auditText,
+          taggerPrompt: currentPrompt,
+          finalPrompt: currentPrompt,
+        );
+        if (!result.hasSuccess) {
+          throw const _ReversePromptUiError('reversePrompt_dualTaggerFailed');
+        }
+        await _save();
+      } else if (state.useOnnxTagger) {
         state = state.copyWith(
           processingStage: ReversePromptProcessingStage.onnxTagger,
         );
         final model = await _resolveSelectedTaggerModel();
-        final result = await _ref.read(localOnnxTaggerServiceProvider).tagImage(
+        final result = await _ref
+            .read(localOnnxTaggerServiceProvider)
+            .tagImage(
               imageBytes: image.bytes,
               model: model,
               generalThreshold: state.taggerGeneralThreshold,
@@ -374,17 +468,34 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
         state = state.copyWith(
           processingStage: ReversePromptProcessingStage.llmReverse,
         );
-        currentPrompt = await _collectStream(
-          _ref.read(promptAssistantServiceProvider).reverseImagePrompt(
+        final visualPrompt = await _collectStream(
+          _ref
+              .read(promptAssistantServiceProvider)
+              .reverseImagePrompt(
                 image.bytes,
                 sessionId: 'reverse_prompt_panel',
                 taggerPrompt: currentPrompt,
               ),
         );
+        currentPrompt = visualPrompt;
         state = state.copyWith(
-          llmPrompt: currentPrompt,
+          llmPrompt: visualPrompt,
           finalPrompt: currentPrompt,
         );
+        if (state.useDualLocalTagger &&
+            localEvidence.trim().isNotEmpty &&
+            visualPrompt.trim().isNotEmpty) {
+          currentPrompt = await _collectStream(
+            _ref
+                .read(promptAssistantServiceProvider)
+                .integrateReverseEvidence(
+                  localEvidence: localEvidence,
+                  visualDescription: visualPrompt,
+                  sessionId: 'reverse_prompt_integrate',
+                ),
+          );
+          state = state.copyWith(finalPrompt: currentPrompt);
+        }
       }
 
       if (state.useCharacterReplace) {
@@ -427,8 +538,9 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
   }
 
   Future<LocalOnnxModelDescriptor> _resolveSelectedTaggerModel() async {
-    final models =
-        await _ref.read(localOnnxModelServiceProvider).scanTaggerModels();
+    final models = await _ref
+        .read(localOnnxModelServiceProvider)
+        .scanTaggerModels();
     if (models.isEmpty) {
       throw const _ReversePromptUiError('reversePrompt_noOnnxModel');
     }
@@ -443,6 +555,29 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
     return models.first;
   }
 
+  Future<DualLocalTaggerModelSelection> _resolveDualTaggerModels() async {
+    final models = await _ref
+        .read(localOnnxModelServiceProvider)
+        .scanTaggerModels();
+    final selection = DualLocalOnnxTaggerService.findPair(
+      models,
+      joyTagPath: state.selectedJoyTaggerModelPath,
+      wdEva02Path: state.selectedWdEva02ModelPath,
+    );
+    if (selection == null) {
+      throw const _ReversePromptUiError('reversePrompt_noDualTaggerModels');
+    }
+    if (selection.joyTag.path != state.selectedJoyTaggerModelPath ||
+        selection.wdEva02.path != state.selectedWdEva02ModelPath) {
+      state = state.copyWith(
+        selectedJoyTaggerModelPath: selection.joyTag.path,
+        selectedWdEva02ModelPath: selection.wdEva02.path,
+      );
+      await _save();
+    }
+    return selection;
+  }
+
   CharacterPrompt? _resolveSelectedCharacter() {
     return _ref.read(reversePromptCharacterProvider.notifier).selectedCharacter;
   }
@@ -452,7 +587,9 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
     required CharacterPrompt character,
   }) {
     return _collectStream(
-      _ref.read(promptAssistantServiceProvider).replaceCharacterPrompt(
+      _ref
+          .read(promptAssistantServiceProvider)
+          .replaceCharacterPrompt(
             inputPrompt,
             sessionId: 'reverse_prompt_character_replace',
             characterName: character.name,

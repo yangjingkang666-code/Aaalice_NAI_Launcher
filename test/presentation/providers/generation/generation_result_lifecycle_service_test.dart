@@ -91,6 +91,12 @@ void main() {
       expect(recipe.request.params.sourceImage, isNull);
       expect(recipe.request.params.prompt, '1girl, blue eyes');
       expect(recipe.characters, [character]);
+      expect(recipe.mainPromptEntries.map((entry) => entry.text), [
+        '1girl',
+        'blue eyes',
+      ]);
+      expect(recipe.structuredMain['subject'], ['1girl']);
+      expect(recipe.structuredMain['appearance'], ['blue eyes']);
     },
   );
 

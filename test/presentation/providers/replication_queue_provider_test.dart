@@ -218,6 +218,90 @@ void main() {
       );
     },
   );
+
+  test('queue admission materializes an implicit random seed once', () async {
+    final container = _buildContainer();
+    addTearDown(container.dispose);
+    final notifier = container.read(replicationQueueNotifierProvider.notifier);
+    final task = ReplicationTask.create(prompt: 'random');
+
+    expect(await notifier.add(task), isTrue);
+    final queued = container
+        .read(replicationQueueNotifierProvider)
+        .tasks
+        .single;
+    expect(queued.seed, isNotNull);
+    expect(queued.seed, inInclusiveRange(0, 0xffffffff));
+    expect(queued.seed, isNot(task.seed));
+  });
+
+  test(
+    'queue admission writes the resolved seed into a generation snapshot',
+    () async {
+      final container = _buildContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(
+        replicationQueueNotifierProvider.notifier,
+      );
+      final task = ReplicationTask.create(
+        prompt: 'random snapshot',
+        generationSnapshot: ReplicationTaskGenerationSnapshot.encode(
+          const ImageParams(prompt: 'random snapshot', seed: -1),
+        ),
+      );
+
+      expect(await notifier.add(task), isTrue);
+      final queued = container
+          .read(replicationQueueNotifierProvider)
+          .tasks
+          .single;
+      final snapshotSeed = ReplicationTaskGenerationSnapshot.decode(
+        queued.generationSnapshot!,
+      ).seed;
+      expect(queued.seed, isNotNull);
+      expect(snapshotSeed, queued.seed);
+      expect(snapshotSeed, isNot(-1));
+    },
+  );
+
+  test('generation snapshot seed wins over a stale task field', () async {
+    final container = _buildContainer();
+    addTearDown(container.dispose);
+    final notifier = container.read(replicationQueueNotifierProvider.notifier);
+    final task = ReplicationTask.create(
+      prompt: 'snapshot authority',
+      seed: 123,
+      generationSnapshot: ReplicationTaskGenerationSnapshot.encode(
+        const ImageParams(prompt: 'snapshot authority', seed: -1),
+      ),
+    );
+
+    expect(await notifier.add(task), isTrue);
+    final queued = container
+        .read(replicationQueueNotifierProvider)
+        .tasks
+        .single;
+    final snapshotSeed = ReplicationTaskGenerationSnapshot.decode(
+      queued.generationSnapshot!,
+    ).seed;
+    expect(queued.seed, snapshotSeed);
+    expect(queued.seed, isNot(123));
+  });
+
+  test('restoring a legacy random task persists its resolved seed', () async {
+    final legacy = ReplicationTask.create(prompt: 'legacy');
+    final storage = _MemoryReplicationQueueStorage()..tasks = [legacy];
+    final container = _buildContainer(queueStorage: storage);
+    addTearDown(container.dispose);
+
+    final restored = container
+        .read(replicationQueueNotifierProvider)
+        .tasks
+        .single;
+    expect(restored.seed, isNotNull);
+    await Future<void>.delayed(Duration.zero);
+    expect(storage.tasks.single.seed, restored.seed);
+  });
 }
 
 ProviderContainer _buildContainer({

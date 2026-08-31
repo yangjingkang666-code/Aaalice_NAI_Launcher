@@ -1428,6 +1428,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get prompt_appliedToMainPrompt => '已应用到主提示词';
 
   @override
+  String get prompt_semanticOrganize => 'AI 整理 Prompt';
+
+  @override
+  String get prompt_semanticOrganizeSubtitle => '同时翻译未知短语并按语义分类，原始英文不会被改写';
+
+  @override
+  String get prompt_semanticNoPrompt => '请先输入主提示词';
+
+  @override
+  String get prompt_semanticNoUnknown => '没有需要 AI 整理的未知短语';
+
+  @override
+  String get prompt_semanticAiFailed => 'AI 整理失败';
+
+  @override
   String get prompt_inputPrompt => '描述你想生成的画面';
 
   @override
@@ -6327,7 +6342,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get reversePrompt_needImageAndMethod =>
-      '请先添加图片，并至少启用 ONNX tagger 或 LLM 反推';
+      '请先添加图片，并至少启用 ONNX、双本地标签或 LLM 反推';
 
   @override
   String get reversePrompt_stagePreparing => '准备反推';
@@ -6349,6 +6364,32 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get reversePrompt_noOnnxModel => '未找到 ONNX tagger 模型，请先在设置中配置模型文件夹';
+
+  @override
+  String get reversePrompt_dualLocalTagger => 'JoyTag + WD EVA02';
+
+  @override
+  String get reversePrompt_dualJoyTag => 'JoyTag 模型';
+
+  @override
+  String get reversePrompt_dualWdEva02 => 'WD EVA02 模型';
+
+  @override
+  String get reversePrompt_dualLocalTaggerHint => '请在设置中导入并配置对应 ONNX 模型';
+
+  @override
+  String get reversePrompt_dualLocalTaggerDescription =>
+      '两个模型按顺序运行，只提供本地候选标签证据；后续仍由云端读图模型整合。';
+
+  @override
+  String get reversePrompt_stageDualLocalTagger => '本地双标签运行中';
+
+  @override
+  String get reversePrompt_noDualTaggerModels =>
+      '未找到 JoyTag 与 WD EVA02 两个 ONNX 模型';
+
+  @override
+  String get reversePrompt_dualTaggerFailed => '本地双标签均运行失败';
 
   @override
   String get promptAssistant_translateProcessing => '翻译中';
@@ -13253,6 +13294,78 @@ class AppLocalizationsZh extends AppLocalizations {
   String promptPatch_aiFailed(String error) {
     return 'AI 提案失败：$error';
   }
+
+  @override
+  String get promptPatch_seedStrategy => '修改 Seed 策略';
+
+  @override
+  String get promptPatch_seedBase => '沿用基础图 Seed';
+
+  @override
+  String get promptPatch_seedRandom => '随机 Seed（入队时只随机一次）';
+
+  @override
+  String get promptPatch_seedSpecified => '指定 Seed';
+
+  @override
+  String get promptPatch_seedValue => 'Seed 数字（0–4294967295）';
+
+  @override
+  String get promptPatch_seedSummaryBase => '将沿用基础图 Seed';
+
+  @override
+  String get promptPatch_seedSummaryRandom => '将于任务入队时随机一次，并在重试时沿用';
+
+  @override
+  String promptPatch_seedSummarySpecified(int seed) {
+    return '将使用指定 Seed：$seed';
+  }
+
+  @override
+  String get promptBatch_title => 'AI 批量规划';
+
+  @override
+  String get promptBatch_reviewHint => 'AI 只提出可审查的姿势/场景变体；确认后才加入串行队列，不会自动生成。';
+
+  @override
+  String get promptBatch_instruction => '任务要求';
+
+  @override
+  String get promptBatch_count => '数量';
+
+  @override
+  String get promptBatch_empty => '输入目标后点击“让 AI 生成计划”';
+
+  @override
+  String get promptBatch_propose => '让 AI 生成计划';
+
+  @override
+  String get promptBatch_addSelected => '加入已选任务';
+
+  @override
+  String get promptBatch_needInstruction => '请先输入批量任务要求';
+
+  @override
+  String promptBatch_failed(String error) {
+    return '批量规划失败：$error';
+  }
+
+  @override
+  String get promptBatch_invalidSeed => '指定 Seed 必须是 0 到 4294967295 之间的整数';
+
+  @override
+  String promptBatch_queueCapacity(int count) {
+    return '队列只剩 $count 个空位，请减少计划项';
+  }
+
+  @override
+  String get promptBatch_partialAdd => '部分任务未能加入队列';
+
+  @override
+  String get promptBatch_editItem => '编辑计划项';
+
+  @override
+  String get promptBatch_summary => '中文摘要';
 
   @override
   String get promptRecipe_load => '加载配方';

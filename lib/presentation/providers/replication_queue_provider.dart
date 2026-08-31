@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/storage/replication_queue_storage.dart';
 import '../../core/storage/queue_state_storage.dart';
+import '../../data/models/recipe/modification_seed_strategy.dart';
 import '../../data/models/queue/replication_task.dart';
 import '../../data/models/queue/replication_task_generation_snapshot.dart';
 import '../../data/models/queue/replication_task_status.dart';
@@ -93,13 +96,20 @@ class ReplicationQueueNotifier extends _$ReplicationQueueNotifier {
   late final QueueStateStorage _stateStorage;
   Future<void> _pendingTaskWrite = Future.value();
   Future<void> _pendingFailedTaskWrite = Future.value();
+  bool _needsSeedPersistence = false;
 
   @override
   ReplicationQueueState build() {
     _storage = ref.read(replicationQueueStorageProvider);
     _stateStorage = ref.read(queueStateStorageProvider);
     // 同步加载持久化数据（Hive Box 已在 main.dart 中预先打开）
-    return _loadFromStorageSync();
+    final loaded = _loadFromStorageSync();
+    if (_needsSeedPersistence) {
+      // Riverpod assigns the value returned by build before the microtask
+      // runs, so _saveToStorage can safely snapshot the normalized state.
+      unawaited(Future<void>.microtask(_saveToStorage));
+    }
+    return loaded;
   }
 
   /// 同步加载队列数据
@@ -111,11 +121,19 @@ class ReplicationQueueNotifier extends _$ReplicationQueueNotifier {
       // 加载时将所有 running 状态的任务重置为 pending
       // （因为应用重启后实际上没有任务在运行）
       final restoredTasks = tasks.map((task) {
+        final withSeed = _materializeTaskSeed(task);
         if (task.status == ReplicationTaskStatus.running) {
-          return task.copyWith(status: ReplicationTaskStatus.pending);
+          return withSeed.copyWith(status: ReplicationTaskStatus.pending);
         }
-        return task;
+        return withSeed;
       }).toList();
+
+      if (!_sameTaskSeedState(tasks, restoredTasks)) {
+        // Keep legacy tasks (which used null/-1 as an implicit random seed)
+        // deterministic across restarts. The write is deliberately queued so
+        // synchronous provider construction remains side-effect safe.
+        _needsSeedPersistence = true;
+      }
 
       return ReplicationQueueState(
         tasks: restoredTasks,
@@ -151,7 +169,7 @@ class ReplicationQueueNotifier extends _$ReplicationQueueNotifier {
     if (state.isFull) {
       return false;
     }
-    state = state.copyWith(tasks: [...state.tasks, task]);
+    state = state.copyWith(tasks: [...state.tasks, _materializeTaskSeed(task)]);
     await _saveToStorage();
 
     return true;
@@ -166,7 +184,10 @@ class ReplicationQueueNotifier extends _$ReplicationQueueNotifier {
     final remaining = state.remainingCapacity;
     if (remaining <= 0) return 0;
 
-    final toAdd = tasks.take(remaining).toList();
+    final toAdd = tasks
+        .take(remaining)
+        .map(_materializeTaskSeed)
+        .toList(growable: false);
     state = state.copyWith(tasks: [...state.tasks, ...toAdd]);
     await _saveToStorage();
 
@@ -358,13 +379,15 @@ class ReplicationQueueNotifier extends _$ReplicationQueueNotifier {
         return false;
       }
     }
-    final tasks = List<ReplicationTask>.from(state.tasks);
-    tasks[taskIndex] = updatedTask.copyWith(
+    final requestedTask = updatedTask.copyWith(
       generationSnapshot: generationSnapshot,
       status: ReplicationTaskStatus.pending,
       startedAt: null,
       completedAt: null,
     );
+    final normalizedTask = _materializeTaskSeed(requestedTask);
+    final tasks = List<ReplicationTask>.from(state.tasks);
+    tasks[taskIndex] = normalizedTask;
 
     state = state.copyWith(tasks: tasks);
     await _saveToStorage();
@@ -419,13 +442,14 @@ class ReplicationQueueNotifier extends _$ReplicationQueueNotifier {
     final taskIndex = state.failedTasks.indexWhere((task) => task.id == taskId);
     if (taskIndex < 0 || state.isFull) return false;
 
-    final retriedTask = state.failedTasks[taskIndex].copyWith(
-      status: ReplicationTaskStatus.pending,
-      retryCount: 0,
-      errorMessage: null,
-      startedAt: null,
-      completedAt: null,
-    );
+    final retriedTask = _materializeTaskSeed(state.failedTasks[taskIndex])
+        .copyWith(
+          status: ReplicationTaskStatus.pending,
+          retryCount: 0,
+          errorMessage: null,
+          startedAt: null,
+          completedAt: null,
+        );
     if (!_hasGeneratableContent(retriedTask)) return false;
 
     final tasks = List<ReplicationTask>.from(state.tasks);
@@ -450,13 +474,14 @@ class ReplicationQueueNotifier extends _$ReplicationQueueNotifier {
     final taskIndex = state.failedTasks.indexWhere((task) => task.id == taskId);
     if (taskIndex < 0 || state.isFull) return false;
 
-    final requeuedTask = state.failedTasks[taskIndex].copyWith(
-      status: ReplicationTaskStatus.pending,
-      retryCount: 0,
-      errorMessage: null,
-      startedAt: null,
-      completedAt: null,
-    );
+    final requeuedTask = _materializeTaskSeed(state.failedTasks[taskIndex])
+        .copyWith(
+          status: ReplicationTaskStatus.pending,
+          retryCount: 0,
+          errorMessage: null,
+          startedAt: null,
+          completedAt: null,
+        );
     if (!_hasGeneratableContent(requeuedTask)) return false;
 
     state = state.copyWith(
@@ -596,28 +621,31 @@ class ReplicationQueueNotifier extends _$ReplicationQueueNotifier {
 
     if (!_hasGeneratableContent(task)) return false;
 
+    final materializedTask = _materializeTaskSeed(task);
     Map<String, dynamic>? generationSnapshot;
     try {
-      generationSnapshot = task.generationSnapshot == null
+      generationSnapshot = materializedTask.generationSnapshot == null
           ? null
-          : ReplicationTaskGenerationSnapshot.clone(task.generationSnapshot!);
+          : ReplicationTaskGenerationSnapshot.clone(
+              materializedTask.generationSnapshot!,
+            );
     } on FormatException {
       return false;
     }
     final newTask = ReplicationTask.create(
-      prompt: task.prompt,
-      negativePrompt: task.negativePrompt,
-      applyNegativePrompt: task.applyNegativePrompt,
-      thumbnailUrl: task.thumbnailUrl,
-      source: task.source,
-      seed: task.seed,
-      sampler: task.sampler,
-      steps: task.steps,
-      cfgScale: task.cfgScale,
-      model: task.model,
-      width: task.width,
-      height: task.height,
-      characterPrompts: task.characterPrompts,
+      prompt: materializedTask.prompt,
+      negativePrompt: materializedTask.negativePrompt,
+      applyNegativePrompt: materializedTask.applyNegativePrompt,
+      thumbnailUrl: materializedTask.thumbnailUrl,
+      source: materializedTask.source,
+      seed: materializedTask.seed,
+      sampler: materializedTask.sampler,
+      steps: materializedTask.steps,
+      cfgScale: materializedTask.cfgScale,
+      model: materializedTask.model,
+      width: materializedTask.width,
+      height: materializedTask.height,
+      characterPrompts: materializedTask.characterPrompts,
       generationSnapshot: generationSnapshot,
     );
 
@@ -642,6 +670,60 @@ class ReplicationQueueNotifier extends _$ReplicationQueueNotifier {
                   character.negativePrompt.trim().isNotEmpty),
         ) ??
         false;
+  }
+
+  /// Materializes an implicit random seed exactly once at queue admission.
+  ///
+  /// A generation snapshot is authoritative when present, so it is cloned with
+  /// the same concrete value. Invalid legacy snapshots are left untouched and
+  /// will still be reported by the queue executor's existing validation path.
+  ReplicationTask _materializeTaskSeed(ReplicationTask task) {
+    final snapshot = task.generationSnapshot;
+    if (snapshot != null) {
+      try {
+        final params = ReplicationTaskGenerationSnapshot.decode(snapshot);
+        if (params.seed >= 0 &&
+            params.seed <= ModificationSeedStrategyResolver.maxSeed) {
+          return task.copyWith(seed: params.seed);
+        }
+        final seed = ModificationSeedStrategyResolver.createRandomSeed();
+        return task.copyWith(
+          seed: seed,
+          generationSnapshot: ReplicationTaskGenerationSnapshot.withSeed(
+            snapshot,
+            seed,
+          ),
+        );
+      } on FormatException {
+        return task;
+      }
+    }
+
+    final existingSeed = task.seed;
+    if (existingSeed != null &&
+        existingSeed >= 0 &&
+        existingSeed <= ModificationSeedStrategyResolver.maxSeed) {
+      return task;
+    }
+
+    return task.copyWith(
+      seed: ModificationSeedStrategyResolver.createRandomSeed(),
+    );
+  }
+
+  bool _sameTaskSeedState(
+    List<ReplicationTask> before,
+    List<ReplicationTask> after,
+  ) {
+    if (before.length != after.length) return false;
+    for (var index = 0; index < before.length; index++) {
+      if (before[index].seed != after[index].seed) return false;
+      if (before[index].generationSnapshot?.toString() !=
+          after[index].generationSnapshot?.toString()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /// 设置加载状态（用于持久化加载）

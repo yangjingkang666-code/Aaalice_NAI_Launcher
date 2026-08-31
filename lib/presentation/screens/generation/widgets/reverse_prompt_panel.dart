@@ -9,6 +9,7 @@ import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 import '../../../../core/platform/platform_capabilities.dart';
 import '../../../../data/models/character/character_prompt.dart';
 import '../../../../data/models/tag_library/tag_library_entry.dart';
+import '../../../../data/services/dual_local_onnx_tagger_service.dart';
 import '../../../../data/services/local_onnx_model_service.dart';
 import '../../../providers/generation/generation_panel_expansion_provider.dart';
 import '../../../providers/generation/generation_params_notifier.dart';
@@ -81,6 +82,10 @@ class _ReversePromptPanelState extends ConsumerState<ReversePromptPanel> {
               const SizedBox(height: 8),
               _buildTaggerControls(state),
             ],
+            if (state.useDualLocalTagger) ...[
+              const SizedBox(height: 8),
+              _buildDualTaggerControls(state),
+            ],
             if (state.useCharacterReplace) ...[
               const SizedBox(height: 8),
               _buildCharacterSelector(state),
@@ -101,6 +106,13 @@ class _ReversePromptPanelState extends ConsumerState<ReversePromptPanel> {
               _PromptOutputBlock(
                 title: 'ONNX tagger',
                 text: state.taggerPrompt,
+              ),
+            ],
+            if (state.dualTaggerPrompt.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _PromptOutputBlock(
+                title: context.l10n.reversePrompt_dualLocalTagger,
+                text: state.dualTaggerPrompt,
               ),
             ],
             if (state.llmPrompt.isNotEmpty) ...[
@@ -266,6 +278,13 @@ class _ReversePromptPanelState extends ConsumerState<ReversePromptPanel> {
           onSelected: state.isProcessing ? null : notifier.setUseOnnxTagger,
         ),
         FilterChip(
+          label: Text(context.l10n.reversePrompt_dualLocalTagger),
+          selected: state.useDualLocalTagger,
+          onSelected: state.isProcessing
+              ? null
+              : notifier.setUseDualLocalTagger,
+        ),
+        FilterChip(
           label: Text(context.l10n.reversePrompt_llmReverse),
           selected: state.useLlmReverse,
           onSelected: state.isProcessing ? null : notifier.setUseLlmReverse,
@@ -336,6 +355,86 @@ class _ReversePromptPanelState extends ConsumerState<ReversePromptPanel> {
             ),
             Text(
               context.l10n.reversePrompt_taggerFilterHint,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDualTaggerControls(ReversePromptState state) {
+    return FutureBuilder<List<LocalOnnxModelDescriptor>>(
+      future: ref.read(localOnnxModelServiceProvider).scanTaggerModels(),
+      builder: (context, snapshot) {
+        final models = snapshot.data ?? const <LocalOnnxModelDescriptor>[];
+        final joyModels = models
+            .where(
+              (model) =>
+                  DualLocalOnnxTaggerService.roleFor(model) ==
+                  DualLocalTaggerRole.joyTag,
+            )
+            .toList();
+        final wdModels = models
+            .where(
+              (model) =>
+                  DualLocalOnnxTaggerService.roleFor(model) ==
+                  DualLocalTaggerRole.wdEva02,
+            )
+            .toList();
+        String? selected(
+          List<LocalOnnxModelDescriptor> candidates,
+          String? path,
+        ) => candidates.any((model) => model.path == path) ? path : null;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: selected(
+                joyModels,
+                state.selectedJoyTaggerModelPath,
+              ),
+              isExpanded: true,
+              items: [
+                for (final model in joyModels)
+                  DropdownMenuItem(value: model.path, child: Text(model.name)),
+              ],
+              onChanged: state.isProcessing
+                  ? null
+                  : ref
+                        .read(reversePromptProvider.notifier)
+                        .setSelectedJoyTaggerModelPath,
+              decoration: InputDecoration(
+                labelText: context.l10n.reversePrompt_dualJoyTag,
+                hintText: context.l10n.reversePrompt_dualLocalTaggerHint,
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(
+              initialValue: selected(wdModels, state.selectedWdEva02ModelPath),
+              isExpanded: true,
+              items: [
+                for (final model in wdModels)
+                  DropdownMenuItem(value: model.path, child: Text(model.name)),
+              ],
+              onChanged: state.isProcessing
+                  ? null
+                  : ref
+                        .read(reversePromptProvider.notifier)
+                        .setSelectedWdEva02ModelPath,
+              decoration: InputDecoration(
+                labelText: context.l10n.reversePrompt_dualWdEva02,
+                hintText: context.l10n.reversePrompt_dualLocalTaggerHint,
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              context.l10n.reversePrompt_dualLocalTaggerDescription,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -581,6 +680,8 @@ class _ReversePromptPanelState extends ConsumerState<ReversePromptPanel> {
         context.l10n.reversePrompt_stagePreparing,
       ReversePromptProcessingStage.onnxTagger =>
         context.l10n.reversePrompt_stageOnnxTagger,
+      ReversePromptProcessingStage.dualLocalTagger =>
+        context.l10n.reversePrompt_stageDualLocalTagger,
       ReversePromptProcessingStage.llmReverse =>
         context.l10n.reversePrompt_stageLlmReverse,
       ReversePromptProcessingStage.characterReplace =>
@@ -597,6 +698,10 @@ class _ReversePromptPanelState extends ConsumerState<ReversePromptPanel> {
       'reversePrompt_needPromptForCharacterReplace' =>
         context.l10n.reversePrompt_needPromptForCharacterReplace,
       'reversePrompt_noOnnxModel' => context.l10n.reversePrompt_noOnnxModel,
+      'reversePrompt_noDualTaggerModels' =>
+        context.l10n.reversePrompt_noDualTaggerModels,
+      'reversePrompt_dualTaggerFailed' =>
+        context.l10n.reversePrompt_dualTaggerFailed,
       _ => error,
     };
   }

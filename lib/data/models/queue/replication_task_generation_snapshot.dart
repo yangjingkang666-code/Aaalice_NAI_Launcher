@@ -23,6 +23,20 @@ abstract final class ReplicationTaskGenerationSnapshot {
     batchSize: decodeBatchSize(snapshot),
   );
 
+  /// Returns a cloned snapshot with a concrete seed.
+  ///
+  /// Queue insertion uses this when a modification explicitly requests a
+  /// random seed. Keeping the resolved value in the immutable snapshot makes
+  /// retries and app restarts deterministic without changing the prompt or
+  /// any binary reference.
+  static Map<String, dynamic> withSeed(
+    Map<String, dynamic> snapshot,
+    int seed,
+  ) => encode(
+    decode(snapshot).copyWith(seed: seed),
+    batchSize: decodeBatchSize(snapshot),
+  );
+
   static Map<String, dynamic> encode(ImageParams params, {int? batchSize}) => {
     'schemaVersion': schemaVersion,
     if (batchSize != null) 'batchSize': batchSize,

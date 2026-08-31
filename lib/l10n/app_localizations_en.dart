@@ -1469,6 +1469,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get prompt_appliedToMainPrompt => 'Applied to main prompt';
 
   @override
+  String get prompt_semanticOrganize => 'Organize Prompt with AI';
+
+  @override
+  String get prompt_semanticOrganizeSubtitle =>
+      'Translate and classify unknown phrases together without rewriting English';
+
+  @override
+  String get prompt_semanticNoPrompt => 'Enter a main prompt first';
+
+  @override
+  String get prompt_semanticNoUnknown =>
+      'No unknown phrases need AI organization';
+
+  @override
+  String get prompt_semanticAiFailed => 'AI organization failed';
+
+  @override
   String get prompt_inputPrompt => 'Describe the image you want to create';
 
   @override
@@ -6584,7 +6601,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reversePrompt_needImageAndMethod =>
-      'Add an image and enable at least ONNX tagger or LLM reverse prompt';
+      'Add an image and enable at least an ONNX tagger, dual local taggers, or LLM reverse prompt';
 
   @override
   String get reversePrompt_stagePreparing => 'Preparing reverse prompt';
@@ -6609,6 +6626,33 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get reversePrompt_noOnnxModel =>
       'No ONNX tagger model found. Configure the model folder in Settings first';
+
+  @override
+  String get reversePrompt_dualLocalTagger => 'JoyTag + WD EVA02';
+
+  @override
+  String get reversePrompt_dualJoyTag => 'JoyTag model';
+
+  @override
+  String get reversePrompt_dualWdEva02 => 'WD EVA02 model';
+
+  @override
+  String get reversePrompt_dualLocalTaggerHint =>
+      'Import and configure the matching ONNX models in Settings';
+
+  @override
+  String get reversePrompt_dualLocalTaggerDescription =>
+      'The two models run sequentially and provide local candidate evidence; the cloud vision model still performs the final integration.';
+
+  @override
+  String get reversePrompt_stageDualLocalTagger => 'Running local dual taggers';
+
+  @override
+  String get reversePrompt_noDualTaggerModels =>
+      'JoyTag and WD EVA02 ONNX models were not found';
+
+  @override
+  String get reversePrompt_dualTaggerFailed => 'Both local taggers failed';
 
   @override
   String get promptAssistant_translateProcessing => 'Translating';
@@ -13828,6 +13872,84 @@ class AppLocalizationsEn extends AppLocalizations {
   String promptPatch_aiFailed(String error) {
     return 'AI proposal failed: $error';
   }
+
+  @override
+  String get promptPatch_seedStrategy => 'Modification seed strategy';
+
+  @override
+  String get promptPatch_seedBase => 'Reuse base image seed';
+
+  @override
+  String get promptPatch_seedRandom => 'Random seed (once when queued)';
+
+  @override
+  String get promptPatch_seedSpecified => 'Use specified seed';
+
+  @override
+  String get promptPatch_seedValue => 'Seed value (0–4294967295)';
+
+  @override
+  String get promptPatch_seedSummaryBase =>
+      'The base image seed will be reused';
+
+  @override
+  String get promptPatch_seedSummaryRandom =>
+      'A seed will be generated once when queued and reused on retry';
+
+  @override
+  String promptPatch_seedSummarySpecified(int seed) {
+    return 'The specified seed will be used: $seed';
+  }
+
+  @override
+  String get promptBatch_title => 'AI batch planner';
+
+  @override
+  String get promptBatch_reviewHint =>
+      'AI proposes reviewable pose/scene variants only. Tasks enter the serial queue only after confirmation; generation never starts automatically.';
+
+  @override
+  String get promptBatch_instruction => 'Task request';
+
+  @override
+  String get promptBatch_count => 'Count';
+
+  @override
+  String get promptBatch_empty =>
+      'Enter a goal, then ask the assistant to propose a plan';
+
+  @override
+  String get promptBatch_propose => 'Propose plan';
+
+  @override
+  String get promptBatch_addSelected => 'Add selected tasks';
+
+  @override
+  String get promptBatch_needInstruction => 'Enter a batch task request first';
+
+  @override
+  String promptBatch_failed(String error) {
+    return 'Batch planning failed: $error';
+  }
+
+  @override
+  String get promptBatch_invalidSeed =>
+      'The specified seed must be an integer from 0 to 4294967295';
+
+  @override
+  String promptBatch_queueCapacity(int count) {
+    return 'Only $count queue slot(s) remain; reduce the plan';
+  }
+
+  @override
+  String get promptBatch_partialAdd =>
+      'Some tasks could not be added to the queue';
+
+  @override
+  String get promptBatch_editItem => 'Edit plan item';
+
+  @override
+  String get promptBatch_summary => 'Summary';
 
   @override
   String get promptRecipe_load => 'Load recipe';
