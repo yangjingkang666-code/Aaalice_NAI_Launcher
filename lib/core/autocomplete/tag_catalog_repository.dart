@@ -227,6 +227,28 @@ class TagCatalogRepository implements CompletionSource {
     return result;
   }
 
+  /// Returns the most-used artist tags from the bundled catalog.
+  ///
+  /// This is intentionally a small, bounded query for prompt experiments such
+  /// as Style Lab. It never contacts Danbooru; callers can fall back to their
+  /// own curated pool when the optional database is unavailable.
+  Future<List<TagCatalogRecord>> popularArtists({int limit = 500}) async {
+    await initialize();
+    final rows = await _database!.rawQuery(
+      'SELECT name, category, post_count FROM tags '
+      'WHERE category IN (?, ?) ORDER BY post_count DESC, name ASC LIMIT ?',
+      [1, 8, limit.clamp(1, 5000)],
+    );
+    return [
+      for (final row in rows)
+        TagCatalogRecord(
+          canonicalTag: row['name'] as String,
+          category: TagCategory.artist,
+          postCount: (row['post_count'] as num?)?.toInt() ?? 1,
+        ),
+    ];
+  }
+
   Future<Map<String, String>> metadata() async {
     await initialize();
     final rows = await _database!.rawQuery('SELECT key, value FROM metadata');

@@ -8,6 +8,8 @@ void main() {
     () {
       expect(AppRoutes.home, '/');
       expect(AppRoutes.localGallery, '/local-gallery');
+      expect(AppRoutes.styleLab, '/style-lab');
+      expect(AppRouteNames.styleLab, 'styleLab');
       expect(AppRouteNames.onlineGallery, 'onlineGallery');
       expect(AppBranch.values.length, 9);
       expect(MainShell, isNotNull);

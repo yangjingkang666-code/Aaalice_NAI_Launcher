@@ -9,9 +9,11 @@ import '../adaptive/adaptive_presenter.dart';
 import '../agent_chat/providers/agent_chat_notifier.dart';
 import '../providers/replication_queue_provider.dart';
 import '../providers/update_provider.dart';
+import '../screens/style_lab/style_lab_copy.dart';
 import '../widgets/common/app_toast.dart';
 import '../widgets/navigation/main_nav_rail.dart';
 import 'app_branch.dart';
+import 'app_routes.dart';
 import 'shell_panels_overlay.dart';
 
 Future<void> showMobileMorePanel({
@@ -86,6 +88,14 @@ Future<void> showMobileMorePanel({
             navigationShell,
             AppBranch.promptConfig,
           ),
+        ),
+        _MobileMoreDestination(
+          icon: Icons.palette_outlined,
+          label: StyleLabCopy.of(panelContext).title,
+          onTap: () {
+            Navigator.of(panelContext).pop();
+            GoRouter.of(context).push(AppRoutes.styleLab);
+          },
         ),
         _MobileMoreDestination(
           icon: Icons.insights_outlined,

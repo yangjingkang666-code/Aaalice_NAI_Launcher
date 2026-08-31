@@ -1026,6 +1026,21 @@ class ImageGenerationNotifier extends _$ImageGenerationNotifier {
     return result;
   }
 
+  /// Saves images selected by the manual style laboratory immediately.
+  ///
+  /// The normal generation flow only calls [_saveImages] when the global
+  /// auto-save switch is enabled. A laboratory favorite is an explicit user
+  /// action, so it needs the same metadata/sidecar handling even when auto-save
+  /// is off.
+  Future<List<GeneratedImage>> saveImagesForStyleLab(
+    List<GeneratedImage> images,
+    ImageParams params,
+  ) async {
+    if (_isDisposed || images.isEmpty) return images;
+    final result = await _saveImages(images, params, epoch: _lifecycleEpoch);
+    return result.images;
+  }
+
   void _replaceImage(String id, GeneratedImage replacement) {
     state = state.copyWith(
       currentImages: state.currentImages

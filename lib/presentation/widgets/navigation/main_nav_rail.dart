@@ -17,6 +17,7 @@ import '../../providers/replication_queue_provider.dart';
 import '../../providers/update_provider.dart';
 import '../../router/app_branch.dart';
 import '../../router/app_routes.dart';
+import '../../screens/style_lab/style_lab_copy.dart';
 import '../../themes/theme_extension.dart';
 import '../auth/account_avatar.dart';
 import '../auth/login_form_container.dart';
@@ -91,6 +92,7 @@ class MainNavRail extends ConsumerWidget {
       queueExecutionNotifierProvider.select((state) => state.status),
     );
     final currentIndex = navigationShell.currentIndex;
+    final isStyleLab = GoRouterState.of(context).uri.path == AppRoutes.styleLab;
     final selectedIndex = _railBranches.indexWhere(
       (branch) => branch.index == currentIndex,
     );
@@ -125,9 +127,27 @@ class MainNavRail extends ConsumerWidget {
                   _NavIcon(
                     icon: Icons.brush, // Canvas/Edit
                     label: context.l10n.nav_canvas,
-                    isSelected: selectedIndex == 0,
-                    onTap: () =>
-                        navigationShell.goBranch(AppBranch.generation.index),
+                    isSelected: selectedIndex == 0 && !isStyleLab,
+                    onTap: () {
+                      if (isStyleLab) {
+                        context.go(AppRoutes.home);
+                      } else {
+                        navigationShell.goBranch(AppBranch.generation.index);
+                      }
+                    },
+                  ),
+
+                  _NavIcon(
+                    icon: Icons.palette_outlined,
+                    label: StyleLabCopy.of(context).title,
+                    isSelected: isStyleLab,
+                    onTap: () {
+                      if (isStyleLab) {
+                        context.go(AppRoutes.home);
+                      } else {
+                        context.push(AppRoutes.styleLab);
+                      }
+                    },
                   ),
 
                   // 本地图库（App生成的图片）

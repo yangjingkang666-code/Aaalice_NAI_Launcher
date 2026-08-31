@@ -11,6 +11,7 @@ import '../providers/update_provider.dart';
 import '../widgets/common/app_toast.dart';
 import 'android_root_back_guard.dart';
 import 'app_branch.dart';
+import 'app_routes.dart';
 import 'global_status_banners.dart';
 import 'mobile_more_panel.dart';
 import 'shell_panels_overlay.dart';
@@ -165,6 +166,12 @@ class MobileShell extends ConsumerWidget {
     if (mobileIndex < 0 || mobileIndex >= mobileNavigationBranches.length) {
       return;
     }
-    navigationShell.goBranch(mobileNavigationBranches[mobileIndex].index);
+    final branch = mobileNavigationBranches[mobileIndex];
+    if (branch == AppBranch.generation &&
+        GoRouterState.of(context).uri.path == AppRoutes.styleLab) {
+      context.go(AppRoutes.home);
+      return;
+    }
+    navigationShell.goBranch(branch.index);
   }
 }

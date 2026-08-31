@@ -16,6 +16,7 @@ import '../screens/settings/settings_screen.dart';
 import '../screens/settings/settings_section.dart';
 import '../screens/slideshow_screen.dart';
 import '../screens/statistics/statistics_screen.dart';
+import '../screens/style_lab/style_lab_screen.dart';
 import '../screens/tag_library_page/tag_library_page_screen.dart';
 import '../screens/vibe_library/vibe_library_screen.dart';
 import 'app_routes.dart';
@@ -93,6 +94,16 @@ GoRouter appRouter(Ref ref) {
                   state: state,
                   child: const GenerationScreen(),
                 ),
+                routes: [
+                  GoRoute(
+                    path: 'style-lab',
+                    name: AppRouteNames.styleLab,
+                    pageBuilder: (context, state) => _buildFadePage(
+                      state: state,
+                      child: const StyleLabScreen(),
+                    ),
+                  ),
+                ],
               ),
               GoRoute(
                 path: AppRoutes.generation,

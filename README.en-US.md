@@ -38,6 +38,7 @@ NAI Launcher is built for people who use NovelAI regularly: generate images, ref
 - **Generation and editing**: text-to-image, image-to-image, Inpaint, Focused Inpaint, Outpaint, and upscale/enhance workflows.
 - **References and characters**: Vibe Transfer, Precise Reference, multi-character prompts, reference images, and independent negative prompts.
 - **Prompt workspace**: tag autocomplete, weight syntax, token counts, pinned words, random tag libraries, and prompt import/export.
+- **Style Lab**: offline random artist chains, configurable style mutations, same-seed A/B comparisons, and on-demand generation with project favorites.
 - **Reviewable Prompt optimization**: generated results persist structured semantic entries; one “Organize with AI” action classifies unknown phrases and supplies Chinese reading translations while local tags and manual edits stay authoritative.
 - **Knowledge / Prompt RAG**: the semantic workbench searches project vocabulary, the bundled tag catalog, and the Chinese dictionary; DanbooruSearch is tried only when local sources have no match. Candidates are applied one by one and every retrieval input is kept as Recipe evidence.
 - **Safe edits and batch planning**: the Prompt Patch workbench protects identity, parameters, and references and offers explicit reuse/random/specified seed behavior; AI batch planning proposes tasks only, which enter the serial queue after per-item review.

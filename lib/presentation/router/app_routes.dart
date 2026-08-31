@@ -5,6 +5,7 @@ abstract final class AppRoutes {
   static const String login = '/login';
   static const String home = '/';
   static const String generation = '/generation';
+  static const String styleLab = '/style-lab';
   static const String localGallery = '/local-gallery';
   static const String onlineGallery = '/online-gallery';
   static const String settings = '/settings';
@@ -23,6 +24,7 @@ abstract final class AppRouteNames {
   static const String login = 'login';
   static const String home = 'home';
   static const String generation = 'generation';
+  static const String styleLab = 'styleLab';
   static const String localGallery = 'localGallery';
   static const String onlineGallery = 'onlineGallery';
   static const String settings = 'settings';

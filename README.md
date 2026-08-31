@@ -38,6 +38,7 @@ NAI Launcher 面向长期使用 NovelAI 的创作者：生成图片、反复调�
 - **文生图与图像编辑**：文生图、图生图、Inpaint、Focused Inpaint、Outpaint，以及放大/增强。
 - **参考与角色**：Vibe Transfer、Precise Reference、多角色提示词、参考图和独立负面提示词。
 - **Prompt 工作台**：标签自动补全、权重语法、Token 统计、固定词、随机词库和提示词导入导出。
+- **画风实验室**：离线随机画师串、可配置风格变异词、同 Seed A/B 对照，按需生成并收藏到项目工作区。
 - **可审查的 Prompt 优化**：生成结果会保存结构化语义条目；“AI 整理”一次完成未知短语的分类与中文阅读翻译，已知标签和手动分类优先保留。
 - **Knowledge / Prompt RAG**：语义工作台支持项目词库、内置 Tag catalog 和中文词典检索；本地无命中时才尝试远程 DanbooruSearch，用户逐条选择后才写回 Prompt，并保留检索证据。
 - **安全修改与批量规划**：Prompt Patch 工作台保护身份、参数和参考素材，并提供明确的沿用/随机/指定 Seed；AI 批量规划只提出计划，逐项审查后才进入串行队列。
