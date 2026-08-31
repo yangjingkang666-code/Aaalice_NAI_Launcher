@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/autocomplete/autocomplete_providers.dart';
 import '../../../data/models/image/image_params.dart';
 import '../../../data/models/style_lab/style_lab_models.dart';
+import '../../../data/services/style_lab_batch_runner.dart';
 import '../../../data/services/style_lab_service.dart';
 import '../../../data/services/style_lab_storage_service.dart';
 import '../../providers/image_generation_provider.dart';
@@ -35,6 +36,7 @@ class _StyleLabScreenState extends ConsumerState<StyleLabScreen> {
   final _styleController = TextEditingController();
   final _fixedSeedController = TextEditingController(text: '123456');
   final _styleLabService = StyleLabService();
+  static const _batchRunner = StyleLabBatchRunner();
 
   StyleLabSession? _session;
   final Map<String, GeneratedImage> _images = <String, GeneratedImage>{};
@@ -274,12 +276,25 @@ class _StyleLabScreenState extends ConsumerState<StyleLabScreen> {
     });
     try {
       final variants = [for (final pair in _session!.pairs) ...pair.variants];
-      for (final variant in variants) {
-        if (_cancelRequested) break;
-        await _generateVariant(variant, fromBatch: true);
-      }
+      final summary = await _batchRunner.run(
+        variants,
+        generate: (variant) async {
+          await _generateVariant(variant, fromBatch: true);
+          return _session?.pairs
+                  .expand((pair) => pair.variants)
+                  .firstWhere(
+                    (candidate) => candidate.id == variant.id,
+                    orElse: () => variant,
+                  )
+                  .status ==
+              StyleLabResultStatus.completed;
+        },
+        shouldStop: () => _cancelRequested,
+      );
       if (mounted) {
-        _showInfo(_cancelRequested ? copy.stopped : copy.batchDone);
+        _showInfo(
+          summary.cancelled || _cancelRequested ? copy.stopped : copy.batchDone,
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);

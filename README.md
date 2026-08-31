@@ -61,6 +61,7 @@ NAI Launcher 面向长期使用 NovelAI 的创作者：生成图片、反复调�
 ### 🤝 协作与连接
 
 - **智能代理**：在生成页侧栏或移动端抽屉中对话，让它协助检索标签、整理 Prompt、查看历史并准备生成；所有可能消耗 Anlas 的操作都会单独确认。
+- **可选的本地 Agent 控制接口**：显式启用后，DeepSeek Harness 等外部 Agent 可通过回环地址调用状态、对话、中止和离线画风实验室规划；令牌、权限确认与 Anlas 审计仍由 Launcher 管理。详见 [`plugins/deepseek-harness/README.md`](plugins/deepseek-harness/README.md)。
 - **图片反推证据链**：可选的本地 JoyTag + WD EVA02 顺序标签作为证据，再交由配置的图片反推模型整合；本地标签失败会保留审计信息，不会自动生成。
 - **桌面联动**：连接 Krita Bridge 与本地 ComfyUI 工作流，把生成和编辑接到已有创作工具中。
 - **同步与备份**：通过 GitHub 或 WebDAV 手动推送、拉取已选择的数据；凭据和 NovelAI Token 不会进入备份。
@@ -216,6 +217,7 @@ NAI Launcher 不把账号系统和作品托管在本项目服务器上。不同�
 
 - NovelAI Token、WebDAV 密码和 GitHub Token 使用设备的安全存储保存，不会写入备份。
 - 本地 Prompt、图库索引、标签和代理会话默认保存在本机；代理的联网工具默认关闭。
+- 外部 Agent 控制接口默认关闭；启用后仅监听回环地址，应用支持目录中的发现文件含有 bearer token，请勿分享或提交该文件。
 - 在线图库包含第三方内容，分级筛选不能替代用户判断；请遵守来源站点规则、当地法律和 NovelAI 服务条款。
 - WebDAV 的数据安全取决于你配置的服务和传输方式；同步前请确认服务器可信，并保留重要数据的本地备份。
 

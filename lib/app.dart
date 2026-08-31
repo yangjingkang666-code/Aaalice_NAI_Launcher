@@ -25,6 +25,8 @@ import 'presentation/providers/image_generation_provider.dart';
 import 'presentation/providers/queue_execution_provider.dart';
 import 'presentation/providers/subscription_provider.dart'
     hide anlasBalanceProvider;
+import 'presentation/agent_chat/providers/agent_external_control_provider.dart';
+import 'presentation/agent_chat/services/agent_external_control_service.dart';
 import 'presentation/themes/app_theme.dart';
 import 'presentation/widgets/common/desktop_window_frame.dart';
 import 'presentation/widgets/shortcuts/shortcut_aware_widget.dart';
@@ -40,6 +42,7 @@ class AppBootstrapEffects extends ConsumerStatefulWidget {
   final ProviderListenable<dynamic>? kritaBridge;
   final ProviderListenable<dynamic>? cooccurrenceDataPack;
   final Future<void> Function()? cloudSyncLifecycle;
+  final AgentExternalControlService? externalAgentControl;
 
   const AppBootstrapEffects({
     super.key,
@@ -49,6 +52,7 @@ class AppBootstrapEffects extends ConsumerStatefulWidget {
     this.kritaBridge,
     this.cooccurrenceDataPack,
     this.cloudSyncLifecycle,
+    this.externalAgentControl,
   });
 
   @override
@@ -91,7 +95,26 @@ class _AppBootstrapEffectsState extends ConsumerState<AppBootstrapEffects>
         (_, __) {},
       );
       unawaited(_restoreCloudBackupConnection());
+      final externalAgentControl = widget.externalAgentControl;
+      if (externalAgentControl != null) {
+        unawaited(_startExternalAgentControl(externalAgentControl));
+      }
     });
+  }
+
+  Future<void> _startExternalAgentControl(
+    AgentExternalControlService service,
+  ) async {
+    try {
+      await service.start();
+    } catch (error) {
+      // The API is opt-in and must not make the main Launcher fail to boot.
+      // The service itself never logs the bearer token.
+      AppLogger.w(
+        'External Agent control could not start: $error',
+        'AgentControl',
+      );
+    }
   }
 
   @override
@@ -179,6 +202,17 @@ class _AppBootstrapEffectsState extends ConsumerState<AppBootstrapEffects>
     _backgroundRefreshSubscription?.close();
     _kritaBridgeSubscription?.close();
     _cooccurrenceDataPackSubscription?.close();
+    final externalAgentControl = widget.externalAgentControl;
+    if (externalAgentControl != null) {
+      unawaited(
+        externalAgentControl.stop().catchError((error) {
+          AppLogger.w(
+            'External Agent control could not stop cleanly: $error',
+            'AgentControl',
+          );
+        }),
+      );
+    }
     super.dispose();
   }
 
@@ -198,6 +232,10 @@ class NAILauncherApp extends ConsumerWidget {
     final fontScale = ref.watch(fontScaleNotifierProvider);
     final locale = ref.watch(localeNotifierProvider);
     final router = ref.watch(appRouterProvider);
+    final externalAgentControl =
+        const bool.fromEnvironment('ENABLE_AGENT_CONTROL')
+        ? ref.read(agentExternalControlProvider)
+        : null;
 
     // 定义全局快捷键映射
     final globalShortcuts = <String, VoidCallback>{
@@ -258,6 +296,7 @@ class NAILauncherApp extends ConsumerWidget {
     };
 
     return AppBootstrapEffects(
+      externalAgentControl: externalAgentControl,
       child: GlobalShortcuts(
         shortcuts: globalShortcuts,
         child: MaterialApp.router(

@@ -146,6 +146,10 @@ class AgentChatNotifier extends StateNotifier<AgentChatState> {
   LocalStorageService get _local => _ref.read(localStorageServiceProvider);
   AgentChatSessionController get _sessionController => _sessionControllerValue!;
 
+  /// Read-only snapshot for non-widget integrations such as the local Agent
+  /// control bridge. Callers cannot mutate the StateNotifier internals.
+  AgentChatState get currentState => state;
+
   Future<void> _init({List<HarnessSkill>? presetSkills}) async {
     final providedSupportDir = _providedSupportDir;
     if (providedSupportDir != null) {

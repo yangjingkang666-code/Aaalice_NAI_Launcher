@@ -1,0 +1,21 @@
+{
+  "name": "@aaalice/deepseek-harness-agent-control",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DeepSeek Harness tools for the optional local Aaalice Agent control API",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --import tsx --test test/client.test.ts"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-llm": "*",
+    "@deepseek-ai/dsh-tools": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.0.0"
+  }
+}

@@ -61,6 +61,7 @@ NAI Launcher is built for people who use NovelAI regularly: generate images, ref
 ### 🤝 Connect
 
 - **Agent Chat**: use the generation sidebar or mobile drawer to search tags, organize Prompts, inspect history, and prepare generations; every operation that may consume Anlas requires separate confirmation.
+- **Optional local Agent control API**: after explicit opt-in, DeepSeek Harness and other local Agents can read status, send prompts, abort a run, and plan offline Style Lab experiments over loopback; the Launcher still owns the token, permission prompts, and Anlas audit. See [`plugins/deepseek-harness/README.md`](plugins/deepseek-harness/README.md).
 - **Image reverse-prompt evidence**: optionally run JoyTag and WD EVA02 sequentially as local evidence before the configured image model integrates the result; failures remain auditable and never start generation automatically.
 - **Desktop integrations**: connect Krita Bridge and local ComfyUI workflows to your existing tools.
 - **Sync and backup**: manually push and pull selected data through GitHub or WebDAV; credentials and NovelAI Tokens are excluded from backups.
@@ -215,6 +216,7 @@ NAI Launcher does not host your account or artwork on a project-operated server.
 
 - NovelAI Tokens, WebDAV passwords, and GitHub Tokens are stored in the device secure store and are not included in backups.
 - Local Prompts, gallery indexes, tags, and Agent sessions are stored on the device by default; Agent web tools are off by default.
+- The external Agent control API is off by default; when enabled it listens only on loopback, and its application-support descriptor contains a bearer token that must not be shared or committed.
 - Online galleries contain third-party content. Rating filters do not replace user judgment; follow source-site rules, local laws, and NovelAI's terms of service.
 - WebDAV security depends on the server and transport you configure. Confirm that the server is trusted and keep important local backups before syncing.
 
