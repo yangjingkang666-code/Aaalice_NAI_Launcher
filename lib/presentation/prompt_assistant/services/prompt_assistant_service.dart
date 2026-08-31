@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 
 import '../../../core/utils/app_logger.dart';
+import '../../../data/models/recipe/prompt_recipe.dart';
+import '../../../data/services/prompt_patch_proposal_service.dart';
 import '../../providers/proxy_settings_provider.dart';
 import '../models/prompt_assistant_models.dart';
 import '../providers/prompt_assistant_config_provider.dart';
@@ -313,6 +315,65 @@ Prompt version: $tagTranslationPromptVersion
 
   static const String characterReplacementInstruction =
       'Output only the complete replaced single-line English comma-separated prompt. Do not output analysis, explanations, remove/keep lists, or Markdown.';
+
+  /// Generates a structured Prompt Patch proposal without applying it.
+  ///
+  /// The request contains recipe metadata only. The response is parsed through
+  /// [PromptPatchProposalService], which rejects unknown fields and prevents an
+  /// assistant from granting itself explicit lock overrides.
+  Future<PromptPatchProposal> proposePromptPatch(
+    PromptRecipe recipe, {
+    required String sessionId,
+    String userInstruction = '',
+  }) async {
+    final config = _ref.read(promptAssistantConfigProvider);
+    final execution = await _resolveTaskExecution(AssistantTaskType.custom);
+    final activeRules =
+        config.rules
+            .where(
+              (rule) =>
+                  rule.taskType == AssistantTaskType.custom && rule.enabled,
+            )
+            .toList()
+          ..sort((a, b) => a.order.compareTo(b.order));
+    final systemPrompt = [
+      ...activeRules
+          .map((rule) => rule.content.trim())
+          .where((e) => e.isNotEmpty),
+      '''You propose safe, minimal edits to a NovelAI prompt recipe.
+Return exactly one JSON object with an "operations" array. Each operation must contain id, op, target, reason, evidenceIds, confidence, and explicit=false.
+Supported ops: add, remove, replace, move, keep, parameter. Targets are main, negative, character:<id>, or request:<field>.
+Never include binary data, image contents, Markdown, comments, or unknown fields. Do not mark any operation explicit; protected identity, pose, style, generation parameters, and references must remain untouched unless a human later confirms it.
+If no safe change is needed, return {"operations":[]}.''',
+    ].join('\n\n');
+    final output = StringBuffer();
+    await for (final chunk in _apiClient.complete(
+      request: PromptAssistantRequest(
+        sessionId: sessionId,
+        provider: execution.provider,
+        model: execution.model.name,
+        systemPrompt: systemPrompt,
+        userParts: [
+          PromptAssistantContentPart.text(
+            PromptPatchProposalService.buildUserContent(
+              recipe,
+              userInstruction: userInstruction,
+            ),
+          ),
+        ],
+        apiKey: execution.apiKey,
+        responseFormat: PromptAssistantResponseFormat.jsonObject,
+        maxOutputTokens: 2048,
+        reasoningMode: PromptAssistantReasoningMode.disabled,
+      ),
+    )) {
+      output.write(chunk.delta);
+    }
+    return PromptPatchProposalService.parseAndValidate(
+      output.toString(),
+      recipe,
+    );
+  }
 
   static String buildCharacterReplacementUserContent({
     required String sourcePrompt,

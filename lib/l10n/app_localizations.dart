@@ -24062,6 +24062,30 @@ abstract class AppLocalizations {
   /// **'Identity, pose, style, parameters, and binary references stay protected by default.'**
   String get promptPatch_protectedHint;
 
+  /// No description provided for @promptPatch_aiPropose.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask AI for a proposal'**
+  String get promptPatch_aiPropose;
+
+  /// No description provided for @promptPatch_aiInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'AI request (optional)'**
+  String get promptPatch_aiInstruction;
+
+  /// No description provided for @promptPatch_aiNoChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'The assistant proposed no safe changes.'**
+  String get promptPatch_aiNoChanges;
+
+  /// No description provided for @promptPatch_aiFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'AI proposal failed: {error}'**
+  String promptPatch_aiFailed(String error);
+
   /// No description provided for @promptRecipe_load.
   ///
   /// In en, this message translates to:
@@ -24079,6 +24103,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recipe loaded; source and reference images need to be reattached before use.'**
   String get promptRecipe_missingAssets;
+
+  /// No description provided for @promptRecipe_reattachTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reattach recipe assets'**
+  String get promptRecipe_reattachTitle;
+
+  /// No description provided for @promptRecipe_reattachDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose files explicitly. Nothing is guessed or saved back into the recipe.'**
+  String get promptRecipe_reattachDescription;
+
+  /// No description provided for @promptRecipe_reattachSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source image'**
+  String get promptRecipe_reattachSource;
+
+  /// No description provided for @promptRecipe_reattachVibe.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibe reference'**
+  String get promptRecipe_reattachVibe;
+
+  /// No description provided for @promptRecipe_reattachPrecise.
+  ///
+  /// In en, this message translates to:
+  /// **'Precise reference'**
+  String get promptRecipe_reattachPrecise;
+
+  /// No description provided for @promptRecipe_chooseFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose file'**
+  String get promptRecipe_chooseFile;
+
+  /// No description provided for @promptRecipe_attachmentReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Attached'**
+  String get promptRecipe_attachmentReady;
+
+  /// No description provided for @promptRecipe_reattachDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply with attachments'**
+  String get promptRecipe_reattachDone;
+
+  /// No description provided for @promptRecipe_vibeFileInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected file did not contain exactly one Vibe reference.'**
+  String get promptRecipe_vibeFileInvalid;
 
   /// No description provided for @promptRecipe_notFound.
   ///

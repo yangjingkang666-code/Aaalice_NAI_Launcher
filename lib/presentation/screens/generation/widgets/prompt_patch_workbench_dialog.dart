@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../../../core/utils/localization_extension.dart';
 import '../../../../data/models/recipe/prompt_recipe.dart';
 import '../../../../data/services/prompt_patch_service.dart';
+import '../../../prompt_assistant/services/prompt_assistant_service.dart';
 import '../../../services/prompt_recipe_application_service.dart';
 
 /// A small, explicit Prompt Patch workbench.
@@ -35,8 +36,10 @@ class PromptPatchWorkbenchDialog extends ConsumerStatefulWidget {
 class _PromptPatchWorkbenchDialogState
     extends ConsumerState<PromptPatchWorkbenchDialog> {
   final List<_PatchDraft> _drafts = [];
+  final TextEditingController _aiInstruction = TextEditingController();
   List<PromptPatchValidationIssue> _issues = const [];
   bool _applying = false;
+  bool _proposing = false;
 
   @override
   void initState() {
@@ -46,6 +49,7 @@ class _PromptPatchWorkbenchDialogState
 
   @override
   void dispose() {
+    _aiInstruction.dispose();
     for (final draft in _drafts) {
       draft.dispose();
     }
@@ -97,6 +101,16 @@ class _PromptPatchWorkbenchDialogState
               ),
               const SizedBox(height: 10),
               _buildRecipeSummary(context),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _aiInstruction,
+                enabled: !_applying && !_proposing,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: l10n.promptPatch_aiInstruction,
+                  isDense: true,
+                ),
+              ),
               const SizedBox(height: 10),
               Expanded(
                 child: SingleChildScrollView(
@@ -126,9 +140,21 @@ class _PromptPatchWorkbenchDialogState
               Row(
                 children: [
                   OutlinedButton.icon(
-                    onPressed: _applying ? null : _addDraft,
+                    onPressed: _applying || _proposing ? null : _addDraft,
                     icon: const Icon(Icons.add),
                     label: Text(l10n.promptPatch_addOperation),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: _applying || _proposing ? null : _propose,
+                    icon: _proposing
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.auto_awesome),
+                    label: Text(l10n.promptPatch_aiPropose),
                   ),
                   const Spacer(),
                   TextButton(
@@ -228,7 +254,7 @@ class _PromptPatchWorkbenchDialogState
                           child: Text(_operationLabel(context, op)),
                         ),
                     ],
-                    onChanged: _applying
+                    onChanged: _applying || _proposing
                         ? null
                         : (value) {
                             if (value == null) return;
@@ -259,7 +285,7 @@ class _PromptPatchWorkbenchDialogState
                           ),
                         ),
                     ],
-                    onChanged: _applying
+                    onChanged: _applying || _proposing
                         ? null
                         : (value) {
                             if (value == null) return;
@@ -272,7 +298,9 @@ class _PromptPatchWorkbenchDialogState
                 ),
                 IconButton(
                   tooltip: l10n.common_delete,
-                  onPressed: _applying ? null : () => _removeDraft(index),
+                  onPressed: _applying || _proposing
+                      ? null
+                      : () => _removeDraft(index),
                   icon: const Icon(Icons.delete_outline),
                 ),
               ],
@@ -286,7 +314,7 @@ class _PromptPatchWorkbenchDialogState
                     Expanded(
                       child: TextField(
                         controller: draft.before,
-                        enabled: !_applying,
+                        enabled: !_applying && !_proposing,
                         decoration: InputDecoration(
                           labelText: l10n.promptPatch_before,
                           isDense: true,
@@ -299,7 +327,7 @@ class _PromptPatchWorkbenchDialogState
                     Expanded(
                       child: TextField(
                         controller: draft.after,
-                        enabled: !_applying,
+                        enabled: !_applying && !_proposing,
                         keyboardType: draft.op == 'move'
                             ? TextInputType.number
                             : TextInputType.text,
@@ -328,7 +356,7 @@ class _PromptPatchWorkbenchDialogState
                   for (final category in _categoryValues)
                     DropdownMenuItem(value: category, child: Text(category)),
                 ],
-                onChanged: _applying
+                onChanged: _applying || _proposing
                     ? null
                     : (value) => setState(() => draft.category = value ?? ''),
               ),
@@ -336,7 +364,7 @@ class _PromptPatchWorkbenchDialogState
             const SizedBox(height: 8),
             TextField(
               controller: draft.reason,
-              enabled: !_applying,
+              enabled: !_applying && !_proposing,
               decoration: InputDecoration(
                 labelText: l10n.promptPatch_reason,
                 isDense: true,
@@ -347,7 +375,7 @@ class _PromptPatchWorkbenchDialogState
               dense: true,
               contentPadding: EdgeInsets.zero,
               title: Text(l10n.promptPatch_explicit),
-              onChanged: _applying
+              onChanged: _applying || _proposing
                   ? null
                   : (value) => setState(() => draft.explicit = value ?? false),
             ),
@@ -449,6 +477,50 @@ class _PromptPatchWorkbenchDialogState
       });
     } finally {
       if (mounted) setState(() => _applying = false);
+    }
+  }
+
+  Future<void> _propose() async {
+    setState(() {
+      _proposing = true;
+      _issues = const [];
+    });
+    try {
+      final proposal = await ref
+          .read(promptAssistantServiceProvider)
+          .proposePromptPatch(
+            widget.recipe,
+            sessionId: 'recipe-patch-${const Uuid().v4()}',
+            userInstruction: _aiInstruction.text,
+          );
+      if (!mounted) return;
+      for (final draft in _drafts) {
+        draft.dispose();
+      }
+      _drafts
+        ..clear()
+        ..addAll(proposal.operations.map(_PatchDraft.fromOperation));
+      setState(() {
+        _issues = proposal.validation.issues;
+      });
+      if (proposal.operations.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.promptPatch_aiNoChanges)),
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _issues = [
+          PromptPatchValidationIssue(
+            operationId: 'ai-proposal',
+            code: PromptPatchIssueCode.invalid,
+            message: context.l10n.promptPatch_aiFailed(error.toString()),
+          ),
+        ];
+      });
+    } finally {
+      if (mounted) setState(() => _proposing = false);
     }
   }
 
@@ -579,6 +651,16 @@ class _PatchDraft {
       after = TextEditingController(),
       reason = TextEditingController(text: '用户手动修改');
 
+  _PatchDraft.fromOperation(PromptPatchOperation operation)
+    : id = operation.id,
+      op = operation.op,
+      target = operation.target,
+      category = operation.category ?? '',
+      explicit = false,
+      before = TextEditingController(text: _valueText(operation.before)),
+      after = TextEditingController(text: _valueText(operation.after)),
+      reason = TextEditingController(text: operation.reason);
+
   final String id;
   String op = 'add';
   String target = 'main';
@@ -592,6 +674,11 @@ class _PatchDraft {
     before.dispose();
     after.dispose();
     reason.dispose();
+  }
+
+  static String _valueText(Object? value) {
+    if (value == null) return '';
+    return value is String ? value : value.toString();
   }
 }
 

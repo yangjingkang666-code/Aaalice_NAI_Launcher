@@ -32,7 +32,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('应用补丁'), findsOneWidget);
-    expect(find.byType(TextField), findsNWidgets(2));
+    expect(find.byType(TextField), findsNWidgets(3));
 
     await tester.tap(find.text('添加操作'));
     await tester.pumpAndSettle();

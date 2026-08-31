@@ -13241,6 +13241,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get promptPatch_protectedHint => '默认保护角色身份、姿势、风格、生成参数和二进制参考素材。';
 
   @override
+  String get promptPatch_aiPropose => '让 AI 生成提案';
+
+  @override
+  String get promptPatch_aiInstruction => '给 AI 的修改要求（可选）';
+
+  @override
+  String get promptPatch_aiNoChanges => 'AI 没有提出安全的修改。';
+
+  @override
+  String promptPatch_aiFailed(String error) {
+    return 'AI 提案失败：$error';
+  }
+
+  @override
   String get promptRecipe_load => '加载配方';
 
   @override
@@ -13248,6 +13262,33 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get promptRecipe_missingAssets => '配方已加载；源图、Vibe 或精准参考需要重新添加后才能使用。';
+
+  @override
+  String get promptRecipe_reattachTitle => '重新挂载配方素材';
+
+  @override
+  String get promptRecipe_reattachDescription => '请明确选择文件；不会猜测素材，也不会把字节写回配方。';
+
+  @override
+  String get promptRecipe_reattachSource => '源图';
+
+  @override
+  String get promptRecipe_reattachVibe => 'Vibe 参考';
+
+  @override
+  String get promptRecipe_reattachPrecise => '精准参考';
+
+  @override
+  String get promptRecipe_chooseFile => '选择文件';
+
+  @override
+  String get promptRecipe_attachmentReady => '已挂载';
+
+  @override
+  String get promptRecipe_reattachDone => '带素材应用';
+
+  @override
+  String get promptRecipe_vibeFileInvalid => '所选文件没有恰好包含一个 Vibe 参考。';
 
   @override
   String get promptRecipe_notFound => '这个生成配方已不可用';
@@ -26491,6 +26532,20 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get promptPatch_protectedHint => '預設保護角色身分、姿勢、風格、生成參數和二進位參考素材。';
 
   @override
+  String get promptPatch_aiPropose => '讓 AI 產生提案';
+
+  @override
+  String get promptPatch_aiInstruction => '給 AI 的修改要求（可選）';
+
+  @override
+  String get promptPatch_aiNoChanges => 'AI 沒有提出安全的修改。';
+
+  @override
+  String promptPatch_aiFailed(String error) {
+    return 'AI 提案失敗：$error';
+  }
+
+  @override
   String get promptRecipe_load => '載入配方';
 
   @override
@@ -26498,6 +26553,33 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get promptRecipe_missingAssets => '配方已載入；來源圖、Vibe 或精準參考需要重新加入後才能使用。';
+
+  @override
+  String get promptRecipe_reattachTitle => '重新掛載配方素材';
+
+  @override
+  String get promptRecipe_reattachDescription => '請明確選擇檔案；不會猜測素材，也不會將位元組寫回配方。';
+
+  @override
+  String get promptRecipe_reattachSource => '來源圖';
+
+  @override
+  String get promptRecipe_reattachVibe => 'Vibe 參考';
+
+  @override
+  String get promptRecipe_reattachPrecise => '精準參考';
+
+  @override
+  String get promptRecipe_chooseFile => '選擇檔案';
+
+  @override
+  String get promptRecipe_attachmentReady => '已掛載';
+
+  @override
+  String get promptRecipe_reattachDone => '帶素材套用';
+
+  @override
+  String get promptRecipe_vibeFileInvalid => '所選檔案沒有恰好包含一個 Vibe 參考。';
 
   @override
   String get promptRecipe_notFound => '這個生成配方已無法使用';

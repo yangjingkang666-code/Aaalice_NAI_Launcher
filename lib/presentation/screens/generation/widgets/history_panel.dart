@@ -51,6 +51,7 @@ import '../services/generation_save_service.dart';
 import '../../../widgets/common/themed_divider.dart';
 import '../../tag_library_page/widgets/entry_add_dialog.dart';
 import 'prompt_patch_workbench_dialog.dart';
+import 'prompt_recipe_asset_reattachment_dialog.dart';
 
 double resolveHistoryPreviewAspectRatio(
   double aspectRatio, {
@@ -1301,7 +1302,7 @@ class _HistoryPanelState extends ConsumerState<HistoryPanel> {
     if (recipeId == null || recipeId.isEmpty) return;
     final l10n = context.l10n;
     try {
-      final restored = await ref
+      var restored = await ref
           .read(promptRecipeApplicationServiceProvider)
           .apply(recipeId);
       if (!context.mounted) return;
@@ -1309,6 +1310,25 @@ class _HistoryPanelState extends ConsumerState<HistoryPanel> {
         AppToast.warning(context, l10n.promptRecipe_notFound);
         return;
       }
+      if (restored.hasUnavailableReferences) {
+        final recipe = await ref
+            .read(promptRecipeRepositoryProvider)
+            .get(recipeId);
+        if (recipe != null && context.mounted) {
+          final attachments = await PromptRecipeAssetReattachmentDialog.show(
+            context,
+            recipe,
+          );
+          if (attachments != null && context.mounted) {
+            restored =
+                await ref
+                    .read(promptRecipeApplicationServiceProvider)
+                    .applyWithAttachments(recipeId, attachments) ??
+                restored;
+          }
+        }
+      }
+      if (!context.mounted) return;
       AppToast.success(context, l10n.promptRecipe_loaded);
       if (restored.hasUnavailableReferences) {
         AppToast.warning(context, l10n.promptRecipe_missingAssets);

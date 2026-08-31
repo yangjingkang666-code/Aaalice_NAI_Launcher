@@ -13475,6 +13475,20 @@ class AppLocalizationsJa extends AppLocalizations {
       '身元、ポーズ、スタイル、生成パラメータ、バイナリ参照は既定で保護されます。';
 
   @override
+  String get promptPatch_aiPropose => 'AI に提案させる';
+
+  @override
+  String get promptPatch_aiInstruction => 'AI への依頼（任意）';
+
+  @override
+  String get promptPatch_aiNoChanges => '安全な変更は提案されませんでした。';
+
+  @override
+  String promptPatch_aiFailed(String error) {
+    return 'AI 提案に失敗しました: $error';
+  }
+
+  @override
   String get promptRecipe_load => 'レシピを読み込む';
 
   @override
@@ -13483,6 +13497,34 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get promptRecipe_missingAssets =>
       'レシピを読み込みました。使用するには元画像と参照画像を再添付してください。';
+
+  @override
+  String get promptRecipe_reattachTitle => 'レシピ素材を再添付';
+
+  @override
+  String get promptRecipe_reattachDescription =>
+      'ファイルを明示的に選択してください。推測やレシピへの保存は行いません。';
+
+  @override
+  String get promptRecipe_reattachSource => '元画像';
+
+  @override
+  String get promptRecipe_reattachVibe => 'Vibe 参照';
+
+  @override
+  String get promptRecipe_reattachPrecise => 'Precise 参照';
+
+  @override
+  String get promptRecipe_chooseFile => 'ファイルを選択';
+
+  @override
+  String get promptRecipe_attachmentReady => '添付済み';
+
+  @override
+  String get promptRecipe_reattachDone => '素材付きで適用';
+
+  @override
+  String get promptRecipe_vibeFileInvalid => '選択したファイルに Vibe 参照が1つだけ含まれていません。';
 
   @override
   String get promptRecipe_notFound => 'この生成レシピは利用できません';

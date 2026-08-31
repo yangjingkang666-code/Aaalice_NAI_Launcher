@@ -310,6 +310,17 @@ class GenerationParamsNotifier extends _$GenerationParamsNotifier {
     _scheduleGenerationStateSave(immediate: true);
   }
 
+  /// Applies a recipe after the caller has explicitly reattached its assets.
+  ///
+  /// Unlike [applyRestoredParams], this method keeps the transient source,
+  /// Vibe, and Precise bytes supplied for the current editor session. The
+  /// recipe layer never persists those bytes, and character state remains
+  /// owned by [characterPromptNotifierProvider].
+  void applyRestoredParamsWithAssets(ImageParams params) {
+    state = params.copyWith(maskImage: null, characters: const []);
+    _scheduleGenerationStateSave(immediate: true);
+  }
+
   // ==================== 生成动作 ====================
 
   /// 更新生成动作

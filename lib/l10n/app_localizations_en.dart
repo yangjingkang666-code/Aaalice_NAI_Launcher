@@ -13815,6 +13815,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'Identity, pose, style, parameters, and binary references stay protected by default.';
 
   @override
+  String get promptPatch_aiPropose => 'Ask AI for a proposal';
+
+  @override
+  String get promptPatch_aiInstruction => 'AI request (optional)';
+
+  @override
+  String get promptPatch_aiNoChanges =>
+      'The assistant proposed no safe changes.';
+
+  @override
+  String promptPatch_aiFailed(String error) {
+    return 'AI proposal failed: $error';
+  }
+
+  @override
   String get promptRecipe_load => 'Load recipe';
 
   @override
@@ -13823,6 +13838,35 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get promptRecipe_missingAssets =>
       'Recipe loaded; source and reference images need to be reattached before use.';
+
+  @override
+  String get promptRecipe_reattachTitle => 'Reattach recipe assets';
+
+  @override
+  String get promptRecipe_reattachDescription =>
+      'Choose files explicitly. Nothing is guessed or saved back into the recipe.';
+
+  @override
+  String get promptRecipe_reattachSource => 'Source image';
+
+  @override
+  String get promptRecipe_reattachVibe => 'Vibe reference';
+
+  @override
+  String get promptRecipe_reattachPrecise => 'Precise reference';
+
+  @override
+  String get promptRecipe_chooseFile => 'Choose file';
+
+  @override
+  String get promptRecipe_attachmentReady => 'Attached';
+
+  @override
+  String get promptRecipe_reattachDone => 'Apply with attachments';
+
+  @override
+  String get promptRecipe_vibeFileInvalid =>
+      'The selected file did not contain exactly one Vibe reference.';
 
   @override
   String get promptRecipe_notFound =>
