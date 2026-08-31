@@ -56,10 +56,10 @@ class _ReversePromptPanelState extends ConsumerState<ReversePromptPanel> {
       onToggle: () => unawaited(
         ref.read(generationPanelExpansionProvider.notifier).toggle(_panel),
       ),
-      hasData: hasImages || state.finalPrompt.isNotEmpty,
+      hasData: hasImages || state.finalPrompt.isNotEmpty || state.draft != null,
       backgroundImage: showBackground
           ? DecodedMemoryImage(
-              bytes: state.images.first.bytes,
+              bytes: (state.selectedImage ?? state.images.first).bytes,
               fit: BoxFit.cover,
               decodeScale: 0.75,
             )
@@ -101,6 +101,14 @@ class _ReversePromptPanelState extends ConsumerState<ReversePromptPanel> {
                 ),
               ),
             ],
+            if (state.draft != null) ...[
+              const SizedBox(height: 12),
+              _buildReviewDraft(state),
+            ],
+            if (state.stageAudits.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _buildStageAudits(state),
+            ],
             if (state.taggerPrompt.isNotEmpty) ...[
               const SizedBox(height: 12),
               _PromptOutputBlock(
@@ -129,7 +137,7 @@ class _ReversePromptPanelState extends ConsumerState<ReversePromptPanel> {
                 text: state.characterReplacePrompt,
               ),
             ],
-            if (state.finalPrompt.isNotEmpty) ...[
+            if (state.finalPrompt.isNotEmpty && state.draft == null) ...[
               const SizedBox(height: 8),
               _PromptOutputBlock(
                 title: context.l10n.reversePrompt_finalResult,
@@ -209,57 +217,80 @@ class _ReversePromptPanelState extends ConsumerState<ReversePromptPanel> {
 
   Widget _buildImageStrip(ReversePromptState state) {
     return SizedBox(
-      height: 74,
+      height: 78,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: state.images.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final image = state.images[index];
-          return Stack(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: SizedBox(
-                  width: 74,
-                  height: 74,
-                  child: DecodedMemoryImage(
-                    bytes: image.bytes,
-                    fit: BoxFit.cover,
-                    decodeScale: 0.75,
-                  ),
+          final isSelected =
+              image.id == state.selectedImageId ||
+              (state.selectedImageId == null && index == 0);
+          return InkWell(
+            onTap: state.isProcessing
+                ? null
+                : () => ref
+                      .read(reversePromptProvider.notifier)
+                      .selectImage(image.id),
+            borderRadius: BorderRadius.circular(9),
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(9),
+                border: Border.all(
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.transparent,
+                  width: 2,
                 ),
               ),
-              Positioned(
-                top: 0,
-                right: 0,
-                child: InkWell(
-                  onTap: () => ref
-                      .read(reversePromptProvider.notifier)
-                      .removeImage(image.id),
-                  borderRadius: BorderRadius.circular(24),
-                  child: SizedBox.square(
-                    dimension: 48,
-                    child: Align(
-                      alignment: Alignment.topRight,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.65),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.all(2),
-                        // 固定深色底必须搭配固定浅色图标，避免浅色主题下失去对比。
-                        child: const Icon(
-                          Icons.close,
-                          size: 14,
-                          color: Colors.white,
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: SizedBox(
+                      width: 70,
+                      height: 70,
+                      child: DecodedMemoryImage(
+                        bytes: image.bytes,
+                        fit: BoxFit.cover,
+                        decodeScale: 0.75,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: InkWell(
+                      onTap: () => ref
+                          .read(reversePromptProvider.notifier)
+                          .removeImage(image.id),
+                      borderRadius: BorderRadius.circular(24),
+                      child: SizedBox.square(
+                        dimension: 48,
+                        child: Align(
+                          alignment: Alignment.topRight,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.65),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.all(2),
+                            // 固定深色底必须搭配固定浅色图标，避免浅色主题下失去对比。
+                            child: const Icon(
+                              Icons.close,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           );
         },
       ),
@@ -588,26 +619,7 @@ class _ReversePromptPanelState extends ConsumerState<ReversePromptPanel> {
         FilledButton.tonalIcon(
           onPressed: state.finalPrompt.trim().isEmpty
               ? null
-              : () {
-                  final prompt = state.finalPrompt.trim();
-                  final currentPrompt = ref
-                      .read(generationParamsNotifierProvider)
-                      .prompt;
-                  ref
-                      .read(promptAssistantHistoryProvider.notifier)
-                      .recordExternalChange(
-                        PromptHistorySessionIds.generationPrompt,
-                        before: currentPrompt,
-                        after: prompt,
-                      );
-                  ref
-                      .read(generationParamsNotifierProvider.notifier)
-                      .updatePrompt(prompt);
-                  AppToast.success(
-                    context,
-                    context.l10n.reversePrompt_sentToPrompt,
-                  );
-                },
+              : () => _applyReviewedResult(state),
           icon: const Icon(Icons.send_rounded, size: 18),
           label: Text(context.l10n.reversePrompt_sendToPrompt),
         ),
@@ -621,7 +633,7 @@ class _ReversePromptPanelState extends ConsumerState<ReversePromptPanel> {
         context: context,
         ref: ref,
         targetName: context.l10n.reversePrompt_externalTarget,
-        imageCount: state.images.length,
+        imageCount: 1,
       );
       if (!confirmed || !mounted) {
         return;
@@ -684,6 +696,8 @@ class _ReversePromptPanelState extends ConsumerState<ReversePromptPanel> {
         context.l10n.reversePrompt_stageDualLocalTagger,
       ReversePromptProcessingStage.llmReverse =>
         context.l10n.reversePrompt_stageLlmReverse,
+      ReversePromptProcessingStage.integration =>
+        context.l10n.reversePrompt_stageIntegration,
       ReversePromptProcessingStage.characterReplace =>
         context.l10n.reversePrompt_stageCharacterReplace,
     };
@@ -702,8 +716,276 @@ class _ReversePromptPanelState extends ConsumerState<ReversePromptPanel> {
         context.l10n.reversePrompt_noDualTaggerModels,
       'reversePrompt_dualTaggerFailed' =>
         context.l10n.reversePrompt_dualTaggerFailed,
+      'reversePrompt_needIntegrationEvidence' =>
+        context.l10n.reversePrompt_needIntegrationEvidence,
       _ => error,
     };
+  }
+
+  Widget _buildReviewDraft(ReversePromptState state) {
+    final draft = state.draft!;
+    final theme = Theme.of(context);
+    final draftKey = draft.rawResponse.hashCode.toString();
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.fact_check_outlined,
+                size: 18,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  context.l10n.reversePrompt_reviewTitle,
+                  style: theme.textTheme.labelLarge,
+                ),
+              ),
+              if (draft.routeLabel.trim().isNotEmpty)
+                Tooltip(
+                  message: draft.routeFingerprint,
+                  child: Text(
+                    draft.routeLabel,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            key: ValueKey('reverse-positive-$draftKey'),
+            initialValue: state.reviewPositivePrompt,
+            minLines: 2,
+            maxLines: 5,
+            onChanged: ref
+                .read(reversePromptProvider.notifier)
+                .setReviewPositivePrompt,
+            decoration: InputDecoration(
+              labelText: context.l10n.reversePrompt_positivePrompt,
+              border: const OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            key: ValueKey('reverse-negative-$draftKey'),
+            initialValue: state.reviewNegativePrompt,
+            minLines: 1,
+            maxLines: 4,
+            onChanged: ref
+                .read(reversePromptProvider.notifier)
+                .setReviewNegativePrompt,
+            decoration: InputDecoration(
+              labelText: context.l10n.reversePrompt_negativePrompt,
+              border: const OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          if (draft.chineseSummary.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              context.l10n.reversePrompt_chineseSummary,
+              style: theme.textTheme.labelMedium,
+            ),
+            const SizedBox(height: 2),
+            SelectableText(draft.chineseSummary),
+          ],
+          if (draft.semanticEntries.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              context.l10n.reversePrompt_semanticEvidence,
+              style: theme.textTheme.labelMedium,
+            ),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final entry in draft.semanticEntries)
+                  Chip(
+                    label: Text(
+                      entry.translation.trim().isEmpty
+                          ? '${entry.category}: ${entry.text}'
+                          : '${entry.category}: ${entry.text} (${entry.translation})',
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+              ],
+            ),
+          ],
+          if (draft.warnings.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              context.l10n.reversePrompt_warnings,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+            for (final warning in draft.warnings)
+              Text(
+                '• $warning',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+          ],
+          if (draft.rawResponse.trim().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: EdgeInsets.zero,
+              title: Text(context.l10n.reversePrompt_rawResponse),
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: SelectableText(
+                    draft.rawResponse,
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton.icon(
+                onPressed: state.isProcessing
+                    ? null
+                    : ref.read(reversePromptProvider.notifier).discardDraft,
+                icon: const Icon(Icons.delete_outline_rounded, size: 17),
+                label: Text(context.l10n.reversePrompt_discardDraft),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.tonalIcon(
+                onPressed: state.finalPrompt.trim().isEmpty
+                    ? null
+                    : () => _applyReviewedResult(state),
+                icon: const Icon(Icons.check_rounded, size: 17),
+                label: Text(context.l10n.reversePrompt_sendToPrompt),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStageAudits(ReversePromptState state) {
+    final theme = Theme.of(context);
+    final notifier = ref.read(reversePromptProvider.notifier);
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            context.l10n.reversePrompt_stageAudit,
+            style: theme.textTheme.labelMedium,
+          ),
+          const SizedBox(height: 4),
+          for (final audit in state.stageAudits) ...[
+            ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                switch (audit.status) {
+                  ReversePromptStageStatus.running => Icons.sync_rounded,
+                  ReversePromptStageStatus.succeeded =>
+                    Icons.check_circle_outline,
+                  ReversePromptStageStatus.failed => Icons.error_outline,
+                },
+                color: switch (audit.status) {
+                  ReversePromptStageStatus.running => theme.colorScheme.primary,
+                  ReversePromptStageStatus.succeeded => Colors.green,
+                  ReversePromptStageStatus.failed => theme.colorScheme.error,
+                },
+              ),
+              title: Text(_localizedProcessingStage(audit.stage)),
+              subtitle: Text(
+                [
+                  if (audit.routeLabel.trim().isNotEmpty) audit.routeLabel,
+                  if (audit.outputPreview.trim().isNotEmpty)
+                    audit.outputPreview,
+                  if (audit.error != null) audit.error!,
+                  if (audit.durationMs != null) '${audit.durationMs} ms',
+                ].join(' · '),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: audit.status == ReversePromptStageStatus.failed
+                  ? IconButton(
+                      tooltip: context.l10n.reversePrompt_retryStage,
+                      onPressed: state.isProcessing
+                          ? null
+                          : () => notifier.retryStage(audit.stage),
+                      icon: const Icon(Icons.refresh_rounded),
+                    )
+                  : null,
+            ),
+            if (audit.rawResponse != null &&
+                audit.rawResponse!.trim().isNotEmpty)
+              ExpansionTile(
+                tilePadding: const EdgeInsets.only(left: 40),
+                childrenPadding: const EdgeInsets.only(left: 40, bottom: 6),
+                title: Text(context.l10n.reversePrompt_rawResponse),
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: SelectableText(
+                      audit.rawResponse!,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _applyReviewedResult(ReversePromptState state) {
+    final prompt =
+        (state.reviewPositivePrompt.trim().isEmpty
+                ? state.finalPrompt
+                : state.reviewPositivePrompt)
+            .trim();
+    if (prompt.isEmpty) return;
+    final current = ref.read(generationParamsNotifierProvider);
+    ref
+        .read(promptAssistantHistoryProvider.notifier)
+        .recordExternalChange(
+          PromptHistorySessionIds.generationPrompt,
+          before: current.prompt,
+          after: prompt,
+        );
+    ref.read(generationParamsNotifierProvider.notifier).updatePrompt(prompt);
+    final negative = state.reviewNegativePrompt.trim();
+    if (negative.isNotEmpty) {
+      ref
+          .read(generationParamsNotifierProvider.notifier)
+          .updateNegativePrompt(negative);
+    }
+    AppToast.success(context, context.l10n.reversePrompt_sentToPrompt);
   }
 }
 

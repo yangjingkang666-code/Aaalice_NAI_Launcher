@@ -12,6 +12,7 @@ import '../../../data/services/prompt_semantic_organization_service.dart';
 import '../../../data/services/ai_batch_plan_service.dart';
 import '../../providers/proxy_settings_provider.dart';
 import '../models/prompt_assistant_models.dart';
+import '../models/reverse_prompt_models.dart';
 import '../providers/prompt_assistant_config_provider.dart';
 import 'provider_adapters/prompt_assistant_adapter.dart';
 import 'prompt_assistant_api_client.dart';
@@ -345,6 +346,66 @@ Prompt organization protocol version: 1
     );
   }
 
+  /// Reverse-prompts an image into a structured, reviewable draft.
+  ///
+  /// The image route is deliberately separate from [reverseImagePrompt]. The
+  /// latter remains a compatibility API for callers that only need a single
+  /// prompt line, while this method preserves negative prompts, semantic
+  /// entries, a Chinese reading summary, warnings, and the selected route.
+  Future<ReversePromptDraft> reverseImagePromptDraft(
+    Uint8List imageBytes, {
+    required String sessionId,
+    String? taggerPrompt,
+    AssistantTaskType taskType = AssistantTaskType.reverse,
+  }) async {
+    final config = _ref.read(promptAssistantConfigProvider);
+    final execution = await _resolveTaskExecution(taskType);
+    final activeRules =
+        config.rules.where((r) => r.taskType == taskType && r.enabled).toList()
+          ..sort((a, b) => a.order.compareTo(b.order));
+    final systemPrompt = [
+      ...activeRules
+          .map((rule) => rule.content.trim())
+          .where((e) => e.isNotEmpty),
+      '''Analyze only visible image facts and return exactly one JSON object with this schema:
+{"main_prompt":"single-line English NovelAI prompt","negative_prompt":"optional single-line negative prompt","main_prompt_entries":[{"text":"visible term","category":"subject|appearance|expression|clothing|action|adult|object|scene|lighting|camera|composition|style|quality|other","translation":"简体中文阅读标签","confidence":0.0}],"chinese_summary":"简体中文画面总结","warnings":["uncertainty or limitation"]}
+Do not invent identity, artist, copyright, hidden details, or unseen anatomy. Use empty strings or an empty array when evidence is unavailable. Keep warnings for uncertain guesses. Do not output Markdown, comments, or extra fields.''',
+    ].join('\n\n');
+    final text = StringBuffer(
+      'Reverse prompt this image. Local tagger output is evidence only and must be verified against the image.',
+    );
+    final trimmedTags = taggerPrompt?.trim();
+    if (trimmedTags != null && trimmedTags.isNotEmpty) {
+      text
+        ..write('\n\nLocal ONNX tagger preliminary results:\n')
+        ..write(trimmedTags);
+    }
+    final raw = await _completeRequest(
+      PromptAssistantRequest(
+        sessionId: sessionId,
+        provider: execution.provider,
+        model: execution.model.name,
+        systemPrompt: systemPrompt,
+        userParts: [
+          PromptAssistantContentPart.text(text.toString()),
+          PromptAssistantContentPart.image(
+            bytes: imageBytes,
+            mimeType: _detectImageMime(imageBytes),
+          ),
+        ],
+        apiKey: execution.apiKey,
+        responseFormat: PromptAssistantResponseFormat.jsonObject,
+        maxOutputTokens: 3072,
+        reasoningMode: PromptAssistantReasoningMode.disabled,
+      ),
+    );
+    return ReversePromptDraft.parse(
+      raw,
+      routeFingerprint: _routeFingerprint(execution),
+      routeLabel: '${execution.provider.name} / ${execution.model.name}',
+    );
+  }
+
   /// Integrates local tagger evidence and a cloud visual description without
   /// sending the source image to the Prompt-generation model.
   ///
@@ -369,6 +430,54 @@ Prompt organization protocol version: 1
       userContent: content,
       userInstruction:
           'Synthesize one complete single-line English NovelAI prompt from the evidence. Preserve visible facts, discard conflicting or uncertain guesses, and do not invent identity. Do not output Markdown, analysis, or explanations.',
+    );
+  }
+
+  /// Integrates local tagger evidence and a visual description into the same
+  /// structured draft used by the direct image route. No source image is sent
+  /// to this text-only integration model.
+  Future<ReversePromptDraft> integrateReverseEvidenceDraft({
+    required String localEvidence,
+    required String visualDescription,
+    required String sessionId,
+  }) async {
+    final config = _ref.read(promptAssistantConfigProvider);
+    final execution = await _resolveTaskExecution(AssistantTaskType.llm);
+    final activeRules =
+        config.rules
+            .where((r) => r.taskType == AssistantTaskType.llm && r.enabled)
+            .toList()
+          ..sort((a, b) => a.order.compareTo(b.order));
+    final systemPrompt = [
+      ...activeRules
+          .map((rule) => rule.content.trim())
+          .where((e) => e.isNotEmpty),
+      '''Return exactly one JSON object using main_prompt, negative_prompt, main_prompt_entries, chinese_summary, and warnings. Treat local tags as non-authoritative evidence and the visual description as primary evidence. Preserve visible facts, discard conflicting or uncertain guesses, and never invent identity. Do not output Markdown, comments, or extra fields.''',
+    ].join('\n\n');
+    final content = [
+      'Local tagger evidence (not authoritative):',
+      localEvidence.trim(),
+      '',
+      'Cloud visual description (primary evidence):',
+      visualDescription.trim(),
+    ].join('\n');
+    final raw = await _completeRequest(
+      PromptAssistantRequest(
+        sessionId: sessionId,
+        provider: execution.provider,
+        model: execution.model.name,
+        systemPrompt: systemPrompt,
+        userParts: [PromptAssistantContentPart.text(content)],
+        apiKey: execution.apiKey,
+        responseFormat: PromptAssistantResponseFormat.jsonObject,
+        maxOutputTokens: 3072,
+        reasoningMode: PromptAssistantReasoningMode.disabled,
+      ),
+    );
+    return ReversePromptDraft.parse(
+      raw,
+      routeFingerprint: _routeFingerprint(execution),
+      routeLabel: '${execution.provider.name} / ${execution.model.name}',
     );
   }
 
@@ -616,6 +725,22 @@ Keep at most $count items and at most 8 operations per item. Do not include Mark
         apiKey: execution.apiKey,
       ),
     );
+  }
+
+  Future<String> _completeRequest(PromptAssistantRequest request) async {
+    final output = StringBuffer();
+    await for (final chunk in _apiClient.complete(request: request)) {
+      if (!chunk.done && chunk.delta.isNotEmpty) {
+        output.write(chunk.delta);
+      }
+    }
+    return output.toString().trim();
+  }
+
+  String _routeFingerprint(
+    ({ProviderConfig provider, ModelConfig model, String? apiKey}) execution,
+  ) {
+    return '${execution.provider.id}/${execution.model.name}/${execution.provider.protocol.name}';
   }
 
   Future<({ProviderConfig provider, ModelConfig model, String? apiKey})>

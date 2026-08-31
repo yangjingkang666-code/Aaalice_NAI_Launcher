@@ -6655,6 +6655,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reversePrompt_dualTaggerFailed => 'Both local taggers failed';
 
   @override
+  String get reversePrompt_stageIntegration =>
+      'Integrating reverse-prompt evidence';
+
+  @override
+  String get reversePrompt_needIntegrationEvidence =>
+      'Run both local taggers and visual reverse before integrating evidence';
+
+  @override
+  String get reversePrompt_reviewTitle => 'Review reverse-prompt draft';
+
+  @override
+  String get reversePrompt_positivePrompt => 'Positive prompt';
+
+  @override
+  String get reversePrompt_negativePrompt => 'Negative prompt';
+
+  @override
+  String get reversePrompt_chineseSummary => 'Chinese visual summary';
+
+  @override
+  String get reversePrompt_semanticEvidence => 'Semantic evidence';
+
+  @override
+  String get reversePrompt_warnings => 'Warnings';
+
+  @override
+  String get reversePrompt_discardDraft => 'Discard draft';
+
+  @override
+  String get reversePrompt_stageAudit => 'Stage audit';
+
+  @override
+  String get reversePrompt_retryStage => 'Retry stage';
+
+  @override
+  String get reversePrompt_rawResponse => 'Raw provider response';
+
+  @override
   String get promptAssistant_translateProcessing => 'Translating';
 
   @override

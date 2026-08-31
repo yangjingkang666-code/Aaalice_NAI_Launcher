@@ -6392,6 +6392,42 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reversePrompt_dualTaggerFailed => '本地双标签均运行失败';
 
   @override
+  String get reversePrompt_stageIntegration => '正在整合反推证据';
+
+  @override
+  String get reversePrompt_needIntegrationEvidence => '请先运行本地双标签和视觉反推，再整合证据';
+
+  @override
+  String get reversePrompt_reviewTitle => '审核反推草稿';
+
+  @override
+  String get reversePrompt_positivePrompt => '正向提示词';
+
+  @override
+  String get reversePrompt_negativePrompt => '负向提示词';
+
+  @override
+  String get reversePrompt_chineseSummary => '中文画面总结';
+
+  @override
+  String get reversePrompt_semanticEvidence => '语义证据';
+
+  @override
+  String get reversePrompt_warnings => '注意事项';
+
+  @override
+  String get reversePrompt_discardDraft => '放弃草稿';
+
+  @override
+  String get reversePrompt_stageAudit => '阶段审计';
+
+  @override
+  String get reversePrompt_retryStage => '重试阶段';
+
+  @override
+  String get reversePrompt_rawResponse => '服务商原始响应';
+
+  @override
   String get promptAssistant_translateProcessing => '翻译中';
 
   @override
@@ -19752,6 +19788,68 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get reversePrompt_noOnnxModel => '未找到 ONNX tagger 模型，請先在設定中配置模型資料夾';
+
+  @override
+  String get reversePrompt_dualLocalTagger => 'JoyTag + WD EVA02';
+
+  @override
+  String get reversePrompt_dualJoyTag => 'JoyTag 模型';
+
+  @override
+  String get reversePrompt_dualWdEva02 => 'WD EVA02 模型';
+
+  @override
+  String get reversePrompt_dualLocalTaggerHint => '請在設定中匯入並配置對應 ONNX 模型';
+
+  @override
+  String get reversePrompt_dualLocalTaggerDescription =>
+      '兩個模型按順序執行，只提供本地候選標籤證據；後續仍由雲端讀圖模型整合。';
+
+  @override
+  String get reversePrompt_stageDualLocalTagger => '本地雙標籤執行中';
+
+  @override
+  String get reversePrompt_noDualTaggerModels =>
+      '未找到 JoyTag 與 WD EVA02 兩個 ONNX 模型';
+
+  @override
+  String get reversePrompt_dualTaggerFailed => '本地雙標籤均執行失敗';
+
+  @override
+  String get reversePrompt_stageIntegration => '正在整合反推證據';
+
+  @override
+  String get reversePrompt_needIntegrationEvidence => '請先執行本地雙標籤和視覺反推，再整合證據';
+
+  @override
+  String get reversePrompt_reviewTitle => '審核反推草稿';
+
+  @override
+  String get reversePrompt_positivePrompt => '正向提示詞';
+
+  @override
+  String get reversePrompt_negativePrompt => '負向提示詞';
+
+  @override
+  String get reversePrompt_chineseSummary => '中文畫面總結';
+
+  @override
+  String get reversePrompt_semanticEvidence => '語義證據';
+
+  @override
+  String get reversePrompt_warnings => '注意事項';
+
+  @override
+  String get reversePrompt_discardDraft => '放棄草稿';
+
+  @override
+  String get reversePrompt_stageAudit => '階段審計';
+
+  @override
+  String get reversePrompt_retryStage => '重試階段';
+
+  @override
+  String get reversePrompt_rawResponse => '服務商原始回應';
 
   @override
   String get promptAssistant_translateProcessing => '翻譯中';

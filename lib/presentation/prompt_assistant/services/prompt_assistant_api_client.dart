@@ -10,6 +10,23 @@ import 'provider_adapters/openai_chat_completions_adapter.dart';
 import 'provider_adapters/openai_responses_adapter.dart';
 import 'provider_adapters/prompt_assistant_adapter.dart';
 
+/// A provider failure that keeps the bounded raw response available to the
+/// review UI while remaining a [StateError] for existing callers/tests.
+class PromptAssistantRequestException extends StateError {
+  PromptAssistantRequestException({
+    required String message,
+    this.rawResponse,
+    this.statusCode,
+    this.providerId,
+    this.model,
+  }) : super(message);
+
+  final String? rawResponse;
+  final int? statusCode;
+  final String? providerId;
+  final String? model;
+}
+
 class PromptAssistantApiClient {
   PromptAssistantApiClient({
     required Dio dio,
@@ -61,11 +78,9 @@ class PromptAssistantApiClient {
         request,
         maxBytes: imageUploadMaxBytes,
       );
-      final content = await _adapterFor(uploadRequest.provider).complete(
-        dio: _dio,
-        request: uploadRequest,
-        cancelToken: cancelToken,
-      );
+      final content = await _adapterFor(
+        uploadRequest.provider,
+      ).complete(dio: _dio, request: uploadRequest, cancelToken: cancelToken);
       final trimmed = content.trim();
       if (trimmed.isEmpty) {
         throw StateError(
@@ -82,7 +97,13 @@ class PromptAssistantApiClient {
       yield StreamingChunk(delta: trimmed);
       yield const StreamingChunk(delta: '', done: true);
     } on DioException catch (e) {
-      throw StateError(_formatDioException(e, request));
+      throw PromptAssistantRequestException(
+        message: _formatDioException(e, request),
+        rawResponse: _extractRawResponse(e.response?.data),
+        statusCode: e.response?.statusCode,
+        providerId: request.provider.id,
+        model: request.model,
+      );
     } finally {
       if (identical(_cancelTokens[request.sessionId], cancelToken)) {
         _cancelTokens.remove(request.sessionId);
@@ -205,7 +226,8 @@ class PromptAssistantApiClient {
     final response = error.response;
     final status = response?.statusCode;
     final target = _safeRequestTarget(response?.requestOptions);
-    final detail = _extractDioErrorDetail(response?.data) ??
+    final detail =
+        _extractDioErrorDetail(response?.data) ??
         error.message ??
         error.error?.toString();
 
@@ -247,6 +269,16 @@ class PromptAssistantApiClient {
     } catch (_) {
       return data.toString();
     }
+  }
+
+  String? _extractRawResponse(dynamic data) {
+    if (data == null) return null;
+    final encoded = data is String ? data.trim() : _encodeErrorData(data);
+    if (encoded.isEmpty) return null;
+    // Provider error bodies can be unexpectedly large. Keep enough context for
+    // diagnosis without retaining an unbounded response in app state.
+    if (encoded.length <= 12000) return encoded;
+    return '${encoded.substring(0, 12000)}...';
   }
 
   String? _safeRequestTarget(RequestOptions? options) {

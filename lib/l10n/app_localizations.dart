@@ -11843,6 +11843,78 @@ abstract class AppLocalizations {
   /// **'Both local taggers failed'**
   String get reversePrompt_dualTaggerFailed;
 
+  /// No description provided for @reversePrompt_stageIntegration.
+  ///
+  /// In en, this message translates to:
+  /// **'Integrating reverse-prompt evidence'**
+  String get reversePrompt_stageIntegration;
+
+  /// No description provided for @reversePrompt_needIntegrationEvidence.
+  ///
+  /// In en, this message translates to:
+  /// **'Run both local taggers and visual reverse before integrating evidence'**
+  String get reversePrompt_needIntegrationEvidence;
+
+  /// No description provided for @reversePrompt_reviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review reverse-prompt draft'**
+  String get reversePrompt_reviewTitle;
+
+  /// No description provided for @reversePrompt_positivePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Positive prompt'**
+  String get reversePrompt_positivePrompt;
+
+  /// No description provided for @reversePrompt_negativePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Negative prompt'**
+  String get reversePrompt_negativePrompt;
+
+  /// No description provided for @reversePrompt_chineseSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Chinese visual summary'**
+  String get reversePrompt_chineseSummary;
+
+  /// No description provided for @reversePrompt_semanticEvidence.
+  ///
+  /// In en, this message translates to:
+  /// **'Semantic evidence'**
+  String get reversePrompt_semanticEvidence;
+
+  /// No description provided for @reversePrompt_warnings.
+  ///
+  /// In en, this message translates to:
+  /// **'Warnings'**
+  String get reversePrompt_warnings;
+
+  /// No description provided for @reversePrompt_discardDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard draft'**
+  String get reversePrompt_discardDraft;
+
+  /// No description provided for @reversePrompt_stageAudit.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage audit'**
+  String get reversePrompt_stageAudit;
+
+  /// No description provided for @reversePrompt_retryStage.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry stage'**
+  String get reversePrompt_retryStage;
+
+  /// No description provided for @reversePrompt_rawResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'Raw provider response'**
+  String get reversePrompt_rawResponse;
+
   /// No description provided for @promptAssistant_translateProcessing.
   ///
   /// In en, this message translates to:

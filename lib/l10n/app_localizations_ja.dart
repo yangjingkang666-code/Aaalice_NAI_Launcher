@@ -6499,6 +6499,43 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reversePrompt_dualTaggerFailed => 'ローカルタグモデルが両方とも失敗しました';
 
   @override
+  String get reversePrompt_stageIntegration => '逆プロンプトの証拠を統合中';
+
+  @override
+  String get reversePrompt_needIntegrationEvidence =>
+      '証拠を統合する前に、ローカルデュアルタグと画像リバースを実行してください';
+
+  @override
+  String get reversePrompt_reviewTitle => '逆プロンプト草稿を確認';
+
+  @override
+  String get reversePrompt_positivePrompt => '正のプロンプト';
+
+  @override
+  String get reversePrompt_negativePrompt => 'ネガティブプロンプト';
+
+  @override
+  String get reversePrompt_chineseSummary => '中国語の画像概要';
+
+  @override
+  String get reversePrompt_semanticEvidence => '意味的証拠';
+
+  @override
+  String get reversePrompt_warnings => '注意事項';
+
+  @override
+  String get reversePrompt_discardDraft => '草稿を破棄';
+
+  @override
+  String get reversePrompt_stageAudit => 'ステージ監査';
+
+  @override
+  String get reversePrompt_retryStage => 'ステージを再試行';
+
+  @override
+  String get reversePrompt_rawResponse => 'プロバイダーの生レスポンス';
+
+  @override
   String get promptAssistant_translateProcessing => '翻訳中';
 
   @override

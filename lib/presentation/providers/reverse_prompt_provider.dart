@@ -10,6 +10,8 @@ import '../../data/services/dual_local_onnx_tagger_service.dart';
 import '../../data/services/local_onnx_model_service.dart';
 import '../../data/services/local_onnx_tagger_service.dart';
 import '../prompt_assistant/models/prompt_assistant_models.dart';
+import '../prompt_assistant/models/reverse_prompt_models.dart';
+import '../prompt_assistant/services/prompt_assistant_api_client.dart';
 import '../prompt_assistant/services/prompt_assistant_service.dart';
 import '../utils/reverse_prompt_image_normalizer.dart';
 
@@ -94,7 +96,56 @@ enum ReversePromptProcessingStage {
   onnxTagger,
   dualLocalTagger,
   llmReverse,
+  integration,
   characterReplace,
+}
+
+enum ReversePromptStageStatus { running, succeeded, failed }
+
+/// A small, UI-safe audit record for one reverse-prompt stage.
+///
+/// It deliberately contains route/model names and bounded output previews, but
+/// never image bytes or API keys. The full provider response, when available,
+/// remains in [ReversePromptDraft.rawResponse].
+class ReversePromptStageAudit {
+  const ReversePromptStageAudit({
+    required this.stage,
+    required this.status,
+    this.routeLabel = '',
+    this.outputPreview = '',
+    this.error,
+    this.rawResponse,
+    this.durationMs,
+  });
+
+  final ReversePromptProcessingStage stage;
+  final ReversePromptStageStatus status;
+  final String routeLabel;
+  final String outputPreview;
+  final String? error;
+  final String? rawResponse;
+  final int? durationMs;
+
+  ReversePromptStageAudit copyWith({
+    ReversePromptStageStatus? status,
+    String? routeLabel,
+    String? outputPreview,
+    String? error,
+    bool clearError = false,
+    String? rawResponse,
+    bool clearRawResponse = false,
+    int? durationMs,
+  }) {
+    return ReversePromptStageAudit(
+      stage: stage,
+      status: status ?? this.status,
+      routeLabel: routeLabel ?? this.routeLabel,
+      outputPreview: outputPreview ?? this.outputPreview,
+      error: clearError ? null : error ?? this.error,
+      rawResponse: clearRawResponse ? null : rawResponse ?? this.rawResponse,
+      durationMs: durationMs ?? this.durationMs,
+    );
+  }
 }
 
 class _ReversePromptUiError implements Exception {
@@ -110,6 +161,7 @@ class ReversePromptState {
     this.useDualLocalTagger = false,
     this.useLlmReverse = true,
     this.useCharacterReplace = false,
+    this.selectedImageId,
     this.selectedTaggerModelPath,
     this.selectedJoyTaggerModelPath,
     this.selectedWdEva02ModelPath,
@@ -121,6 +173,11 @@ class ReversePromptState {
     this.llmPrompt = '',
     this.characterReplacePrompt = '',
     this.finalPrompt = '',
+    this.draft,
+    this.reviewPositivePrompt = '',
+    this.reviewNegativePrompt = '',
+    this.stageAudits = const [],
+    this.lastRawResponse,
     this.isProcessing = false,
     this.processingStage,
     this.error,
@@ -131,6 +188,7 @@ class ReversePromptState {
   final bool useDualLocalTagger;
   final bool useLlmReverse;
   final bool useCharacterReplace;
+  final String? selectedImageId;
   final String? selectedTaggerModelPath;
   final String? selectedJoyTaggerModelPath;
   final String? selectedWdEva02ModelPath;
@@ -142,6 +200,11 @@ class ReversePromptState {
   final String llmPrompt;
   final String characterReplacePrompt;
   final String finalPrompt;
+  final ReversePromptDraft? draft;
+  final String reviewPositivePrompt;
+  final String reviewNegativePrompt;
+  final List<ReversePromptStageAudit> stageAudits;
+  final String? lastRawResponse;
   final bool isProcessing;
   final ReversePromptProcessingStage? processingStage;
   final String? error;
@@ -150,12 +213,27 @@ class ReversePromptState {
       images.isNotEmpty &&
       (useOnnxTagger || useDualLocalTagger || useLlmReverse);
 
+  bool get hasReviewableDraft =>
+      draft != null && reviewPositivePrompt.trim().isNotEmpty;
+
+  ReversePromptImage? get selectedImage {
+    final id = selectedImageId;
+    if (id != null) {
+      for (final image in images) {
+        if (image.id == id) return image;
+      }
+    }
+    return images.isEmpty ? null : images.first;
+  }
+
   ReversePromptState copyWith({
     List<ReversePromptImage>? images,
     bool? useOnnxTagger,
     bool? useDualLocalTagger,
     bool? useLlmReverse,
     bool? useCharacterReplace,
+    String? selectedImageId,
+    bool clearSelectedImageId = false,
     String? selectedTaggerModelPath,
     bool clearSelectedTaggerModelPath = false,
     String? selectedJoyTaggerModelPath,
@@ -171,6 +249,13 @@ class ReversePromptState {
     String? llmPrompt,
     String? characterReplacePrompt,
     String? finalPrompt,
+    ReversePromptDraft? draft,
+    bool clearDraft = false,
+    String? reviewPositivePrompt,
+    String? reviewNegativePrompt,
+    List<ReversePromptStageAudit>? stageAudits,
+    String? lastRawResponse,
+    bool clearLastRawResponse = false,
     bool? isProcessing,
     ReversePromptProcessingStage? processingStage,
     bool clearProcessingStage = false,
@@ -183,6 +268,9 @@ class ReversePromptState {
       useDualLocalTagger: useDualLocalTagger ?? this.useDualLocalTagger,
       useLlmReverse: useLlmReverse ?? this.useLlmReverse,
       useCharacterReplace: useCharacterReplace ?? this.useCharacterReplace,
+      selectedImageId: clearSelectedImageId
+          ? null
+          : selectedImageId ?? this.selectedImageId,
       selectedTaggerModelPath: clearSelectedTaggerModelPath
           ? null
           : selectedTaggerModelPath ?? this.selectedTaggerModelPath,
@@ -205,6 +293,13 @@ class ReversePromptState {
       characterReplacePrompt:
           characterReplacePrompt ?? this.characterReplacePrompt,
       finalPrompt: finalPrompt ?? this.finalPrompt,
+      draft: clearDraft ? null : draft ?? this.draft,
+      reviewPositivePrompt: reviewPositivePrompt ?? this.reviewPositivePrompt,
+      reviewNegativePrompt: reviewNegativePrompt ?? this.reviewNegativePrompt,
+      stageAudits: stageAudits ?? this.stageAudits,
+      lastRawResponse: clearLastRawResponse
+          ? null
+          : lastRawResponse ?? this.lastRawResponse,
       isProcessing: isProcessing ?? this.isProcessing,
       processingStage: clearProcessingStage
           ? null
@@ -292,7 +387,11 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
       bytes: normalizedBytes,
       name: name,
     );
-    state = state.copyWith(images: [...state.images, next], clearError: true);
+    state = state.copyWith(
+      images: [...state.images, next],
+      selectedImageId: state.selectedImageId ?? next.id,
+      clearError: true,
+    );
   }
 
   Future<Uint8List> _normalizeImage(Uint8List bytes) async {
@@ -304,13 +403,24 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
   }
 
   void removeImage(String id) {
+    final remaining = state.images.where((e) => e.id != id).toList();
     state = state.copyWith(
-      images: state.images.where((e) => e.id != id).toList(),
+      images: remaining,
+      selectedImageId: state.selectedImageId == id
+          ? (remaining.isEmpty ? null : remaining.first.id)
+          : state.selectedImageId,
+      clearSelectedImageId: state.selectedImageId == id && remaining.isEmpty,
     );
   }
 
   void clearImages() {
-    state = state.copyWith(images: const []);
+    state = state.copyWith(images: const [], clearSelectedImageId: true);
+  }
+
+  void selectImage(String id) {
+    if (state.images.any((image) => image.id == id)) {
+      state = state.copyWith(selectedImageId: id);
+    }
   }
 
   Future<void> setUseOnnxTagger(bool value) async {
@@ -411,90 +521,43 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
       llmPrompt: '',
       characterReplacePrompt: '',
       finalPrompt: '',
+      clearDraft: true,
+      reviewPositivePrompt: '',
+      reviewNegativePrompt: '',
+      stageAudits: const [],
+      clearLastRawResponse: true,
       clearError: true,
     );
 
     try {
       var currentPrompt = '';
       var localEvidence = '';
-      final image = state.images.first;
+      final image = state.selectedImage;
+      if (image == null) {
+        throw const _ReversePromptUiError('reversePrompt_needImageAndMethod');
+      }
       if (state.useDualLocalTagger) {
-        state = state.copyWith(
-          processingStage: ReversePromptProcessingStage.dualLocalTagger,
-        );
-        final models = await _resolveDualTaggerModels();
-        final result = await _ref
-            .read(dualLocalOnnxTaggerServiceProvider)
-            .tagImage(
-              imageBytes: image.bytes,
-              models: models,
-              generalThreshold: state.taggerGeneralThreshold,
-              characterThreshold: state.taggerCharacterThreshold,
-            );
-        currentPrompt = result.combinedPrompt;
-        localEvidence = result.auditText;
-        state = state.copyWith(
-          dualTaggerPrompt: result.auditText,
-          taggerPrompt: currentPrompt,
-          finalPrompt: currentPrompt,
-        );
-        if (!result.hasSuccess) {
-          throw const _ReversePromptUiError('reversePrompt_dualTaggerFailed');
-        }
-        await _save();
-      } else if (state.useOnnxTagger) {
-        state = state.copyWith(
-          processingStage: ReversePromptProcessingStage.onnxTagger,
-        );
-        final model = await _resolveSelectedTaggerModel();
-        final result = await _ref
-            .read(localOnnxTaggerServiceProvider)
-            .tagImage(
-              imageBytes: image.bytes,
-              model: model,
-              generalThreshold: state.taggerGeneralThreshold,
-              characterThreshold: state.taggerCharacterThreshold,
-            );
+        final result = await _runDualLocalTaggerStage(image);
         currentPrompt = result.prompt;
-        state = state.copyWith(
-          taggerPrompt: currentPrompt,
-          finalPrompt: currentPrompt,
-          selectedTaggerModelPath: model.path,
-        );
-        await _save();
+        localEvidence = result.evidence;
+      } else if (state.useOnnxTagger) {
+        currentPrompt = await _runOnnxTaggerStage(image);
       }
 
       if (state.useLlmReverse) {
-        state = state.copyWith(
-          processingStage: ReversePromptProcessingStage.llmReverse,
+        final draft = await _runLlmReverseStage(
+          image,
+          taggerPrompt: currentPrompt,
         );
-        final visualPrompt = await _collectStream(
-          _ref
-              .read(promptAssistantServiceProvider)
-              .reverseImagePrompt(
-                image.bytes,
-                sessionId: 'reverse_prompt_panel',
-                taggerPrompt: currentPrompt,
-              ),
-        );
-        currentPrompt = visualPrompt;
-        state = state.copyWith(
-          llmPrompt: visualPrompt,
-          finalPrompt: currentPrompt,
-        );
+        currentPrompt = draft.positivePrompt;
         if (state.useDualLocalTagger &&
             localEvidence.trim().isNotEmpty &&
-            visualPrompt.trim().isNotEmpty) {
-          currentPrompt = await _collectStream(
-            _ref
-                .read(promptAssistantServiceProvider)
-                .integrateReverseEvidence(
-                  localEvidence: localEvidence,
-                  visualDescription: visualPrompt,
-                  sessionId: 'reverse_prompt_integrate',
-                ),
+            currentPrompt.trim().isNotEmpty) {
+          final integrated = await _runIntegrationStage(
+            localEvidence: localEvidence,
+            visualDescription: currentPrompt,
           );
-          state = state.copyWith(finalPrompt: currentPrompt);
+          currentPrompt = integrated.positivePrompt;
         }
       }
 
@@ -510,16 +573,9 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
             'reversePrompt_needPromptForCharacterReplace',
           );
         }
-        state = state.copyWith(
-          processingStage: ReversePromptProcessingStage.characterReplace,
-        );
-        currentPrompt = await _runCharacterReplace(
+        currentPrompt = await _runCharacterReplaceStage(
           inputPrompt: currentPrompt,
           character: character,
-        );
-        state = state.copyWith(
-          characterReplacePrompt: currentPrompt,
-          finalPrompt: currentPrompt,
         );
       }
 
@@ -529,12 +585,339 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
         finalPrompt: currentPrompt,
       );
     } catch (e) {
+      final failedStage = state.processingStage;
+      if (failedStage != null &&
+          failedStage != ReversePromptProcessingStage.preparing) {
+        _recordStageFailure(
+          failedStage,
+          e.toString(),
+          rawResponse: e is PromptAssistantRequestException
+              ? e.rawResponse
+              : null,
+        );
+      }
       state = state.copyWith(
         isProcessing: false,
         clearProcessingStage: true,
+        lastRawResponse: e is PromptAssistantRequestException
+            ? e.rawResponse
+            : null,
+        clearLastRawResponse:
+            e is! PromptAssistantRequestException || e.rawResponse == null,
         error: e is _ReversePromptUiError ? e.key : e.toString(),
       );
     }
+  }
+
+  /// Re-runs one failed/intermediate stage without silently calling later
+  /// stages. The reviewer can inspect the new evidence and explicitly run the
+  /// full chain again if downstream output should be regenerated.
+  Future<void> retryStage(ReversePromptProcessingStage stage) async {
+    if (state.isProcessing ||
+        state.images.isEmpty ||
+        stage == ReversePromptProcessingStage.preparing) {
+      return;
+    }
+    state = state.copyWith(
+      isProcessing: true,
+      clearError: true,
+      clearLastRawResponse: true,
+    );
+    try {
+      final image = state.selectedImage;
+      if (image == null) {
+        throw const _ReversePromptUiError('reversePrompt_needImageAndMethod');
+      }
+      switch (stage) {
+        case ReversePromptProcessingStage.onnxTagger:
+          await _runOnnxTaggerStage(image);
+        case ReversePromptProcessingStage.dualLocalTagger:
+          await _runDualLocalTaggerStage(image);
+        case ReversePromptProcessingStage.llmReverse:
+          await _runLlmReverseStage(image, taggerPrompt: state.taggerPrompt);
+        case ReversePromptProcessingStage.integration:
+          final localEvidence = state.dualTaggerPrompt.trim();
+          final visualDescription = state.llmPrompt.trim();
+          if (localEvidence.isEmpty || visualDescription.isEmpty) {
+            throw const _ReversePromptUiError(
+              'reversePrompt_needIntegrationEvidence',
+            );
+          }
+          await _runIntegrationStage(
+            localEvidence: localEvidence,
+            visualDescription: visualDescription,
+          );
+        case ReversePromptProcessingStage.characterReplace:
+          final character = _resolveSelectedCharacter();
+          final input = state.reviewPositivePrompt.trim().isNotEmpty
+              ? state.reviewPositivePrompt
+              : state.finalPrompt;
+          if (character == null || character.prompt.trim().isEmpty) {
+            throw const _ReversePromptUiError(
+              'reversePrompt_needReplacementCharacter',
+            );
+          }
+          if (input.trim().isEmpty) {
+            throw const _ReversePromptUiError(
+              'reversePrompt_needPromptForCharacterReplace',
+            );
+          }
+          await _runCharacterReplaceStage(
+            inputPrompt: input,
+            character: character,
+          );
+        case ReversePromptProcessingStage.preparing:
+          break;
+      }
+      state = state.copyWith(isProcessing: false, clearProcessingStage: true);
+    } catch (e) {
+      final failedStage = state.processingStage;
+      if (failedStage != null &&
+          failedStage != ReversePromptProcessingStage.preparing) {
+        _recordStageFailure(
+          failedStage,
+          e.toString(),
+          rawResponse: e is PromptAssistantRequestException
+              ? e.rawResponse
+              : null,
+        );
+      }
+      state = state.copyWith(
+        isProcessing: false,
+        clearProcessingStage: true,
+        lastRawResponse: e is PromptAssistantRequestException
+            ? e.rawResponse
+            : null,
+        clearLastRawResponse:
+            e is! PromptAssistantRequestException || e.rawResponse == null,
+        error: e is _ReversePromptUiError ? e.key : e.toString(),
+      );
+    }
+  }
+
+  void setReviewPositivePrompt(String value) {
+    state = state.copyWith(reviewPositivePrompt: value, finalPrompt: value);
+  }
+
+  void setReviewNegativePrompt(String value) {
+    state = state.copyWith(reviewNegativePrompt: value);
+  }
+
+  void discardDraft() {
+    state = state.copyWith(
+      clearDraft: true,
+      reviewPositivePrompt: '',
+      reviewNegativePrompt: '',
+      finalPrompt: '',
+    );
+  }
+
+  Future<String> _runOnnxTaggerStage(ReversePromptImage image) async {
+    _beginStage(ReversePromptProcessingStage.onnxTagger);
+    final startedAt = DateTime.now();
+    final model = await _resolveSelectedTaggerModel();
+    final result = await _ref
+        .read(localOnnxTaggerServiceProvider)
+        .tagImage(
+          imageBytes: image.bytes,
+          model: model,
+          generalThreshold: state.taggerGeneralThreshold,
+          characterThreshold: state.taggerCharacterThreshold,
+        );
+    final prompt = result.prompt.trim();
+    state = state.copyWith(
+      taggerPrompt: prompt,
+      finalPrompt: prompt,
+      selectedTaggerModelPath: model.path,
+    );
+    _completeStage(
+      ReversePromptProcessingStage.onnxTagger,
+      routeLabel: model.name,
+      output: prompt,
+      durationMs: DateTime.now().difference(startedAt).inMilliseconds,
+    );
+    await _save();
+    return prompt;
+  }
+
+  Future<({String prompt, String evidence})> _runDualLocalTaggerStage(
+    ReversePromptImage image,
+  ) async {
+    _beginStage(ReversePromptProcessingStage.dualLocalTagger);
+    final startedAt = DateTime.now();
+    final models = await _resolveDualTaggerModels();
+    final result = await _ref
+        .read(dualLocalOnnxTaggerServiceProvider)
+        .tagImage(
+          imageBytes: image.bytes,
+          models: models,
+          generalThreshold: state.taggerGeneralThreshold,
+          characterThreshold: state.taggerCharacterThreshold,
+        );
+    final prompt = result.combinedPrompt.trim();
+    final evidence = result.auditText.trim();
+    state = state.copyWith(
+      dualTaggerPrompt: evidence,
+      taggerPrompt: prompt,
+      finalPrompt: prompt,
+    );
+    if (!result.hasSuccess) {
+      throw const _ReversePromptUiError('reversePrompt_dualTaggerFailed');
+    }
+    _completeStage(
+      ReversePromptProcessingStage.dualLocalTagger,
+      routeLabel: '${models.joyTag.name} + ${models.wdEva02.name}',
+      output: evidence,
+      durationMs: DateTime.now().difference(startedAt).inMilliseconds,
+    );
+    await _save();
+    return (prompt: prompt, evidence: evidence);
+  }
+
+  Future<ReversePromptDraft> _runLlmReverseStage(
+    ReversePromptImage image, {
+    required String taggerPrompt,
+  }) async {
+    _beginStage(ReversePromptProcessingStage.llmReverse);
+    final startedAt = DateTime.now();
+    final draft = await _ref
+        .read(promptAssistantServiceProvider)
+        .reverseImagePromptDraft(
+          image.bytes,
+          sessionId: 'reverse_prompt_panel',
+          taggerPrompt: taggerPrompt,
+        );
+    state = state.copyWith(
+      draft: draft,
+      llmPrompt: draft.positivePrompt,
+      finalPrompt: draft.positivePrompt,
+      reviewPositivePrompt: draft.positivePrompt,
+      reviewNegativePrompt: draft.negativePrompt,
+      lastRawResponse: draft.rawResponse,
+    );
+    _completeStage(
+      ReversePromptProcessingStage.llmReverse,
+      routeLabel: draft.routeLabel,
+      output: draft.positivePrompt,
+      durationMs: DateTime.now().difference(startedAt).inMilliseconds,
+    );
+    return draft;
+  }
+
+  Future<ReversePromptDraft> _runIntegrationStage({
+    required String localEvidence,
+    required String visualDescription,
+  }) async {
+    _beginStage(ReversePromptProcessingStage.integration);
+    final startedAt = DateTime.now();
+    final integrated = await _ref
+        .read(promptAssistantServiceProvider)
+        .integrateReverseEvidenceDraft(
+          localEvidence: localEvidence,
+          visualDescription: visualDescription,
+          sessionId: 'reverse_prompt_integrate',
+        );
+    state = state.copyWith(
+      draft: integrated,
+      finalPrompt: integrated.positivePrompt,
+      reviewPositivePrompt: integrated.positivePrompt,
+      reviewNegativePrompt: integrated.negativePrompt,
+      lastRawResponse: integrated.rawResponse,
+    );
+    _completeStage(
+      ReversePromptProcessingStage.integration,
+      routeLabel: integrated.routeLabel,
+      output: integrated.positivePrompt,
+      durationMs: DateTime.now().difference(startedAt).inMilliseconds,
+    );
+    return integrated;
+  }
+
+  Future<String> _runCharacterReplaceStage({
+    required String inputPrompt,
+    required CharacterPrompt character,
+  }) async {
+    _beginStage(ReversePromptProcessingStage.characterReplace);
+    final startedAt = DateTime.now();
+    final prompt = await _runCharacterReplace(
+      inputPrompt: inputPrompt,
+      character: character,
+    );
+    final updatedDraft = state.draft?.copyWith(positivePrompt: prompt);
+    state = state.copyWith(
+      draft: updatedDraft,
+      characterReplacePrompt: prompt,
+      finalPrompt: prompt,
+      reviewPositivePrompt: prompt,
+    );
+    _completeStage(
+      ReversePromptProcessingStage.characterReplace,
+      output: prompt,
+      durationMs: DateTime.now().difference(startedAt).inMilliseconds,
+    );
+    return prompt;
+  }
+
+  void _beginStage(ReversePromptProcessingStage stage) {
+    final audits =
+        state.stageAudits
+            .where((audit) => audit.stage != stage)
+            .toList(growable: true)
+          ..add(
+            ReversePromptStageAudit(
+              stage: stage,
+              status: ReversePromptStageStatus.running,
+            ),
+          );
+    state = state.copyWith(processingStage: stage, stageAudits: audits);
+  }
+
+  void _completeStage(
+    ReversePromptProcessingStage stage, {
+    String routeLabel = '',
+    String output = '',
+    int? durationMs,
+  }) {
+    final audits =
+        state.stageAudits
+            .where((audit) => audit.stage != stage)
+            .toList(growable: true)
+          ..add(
+            ReversePromptStageAudit(
+              stage: stage,
+              status: ReversePromptStageStatus.succeeded,
+              routeLabel: routeLabel,
+              outputPreview: _auditPreview(output),
+              durationMs: durationMs,
+            ),
+          );
+    state = state.copyWith(stageAudits: audits);
+  }
+
+  void _recordStageFailure(
+    ReversePromptProcessingStage stage,
+    String error, {
+    String? rawResponse,
+  }) {
+    final audits =
+        state.stageAudits
+            .where((audit) => audit.stage != stage)
+            .toList(growable: true)
+          ..add(
+            ReversePromptStageAudit(
+              stage: stage,
+              status: ReversePromptStageStatus.failed,
+              error: error,
+              rawResponse: rawResponse,
+            ),
+          );
+    state = state.copyWith(stageAudits: audits);
+  }
+
+  static String _auditPreview(String value) {
+    final normalized = value.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (normalized.length <= 160) return normalized;
+    return '${normalized.substring(0, 160)}...';
   }
 
   Future<LocalOnnxModelDescriptor> _resolveSelectedTaggerModel() async {
