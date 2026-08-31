@@ -420,6 +420,9 @@ void main() {
       );
 
       final params = container.read(generationParamsNotifierProvider.notifier);
+      // V4.5 is the supported reference point for the legacy inpaint price;
+      // V5 deliberately uses its 1.5x model multiplier.
+      params.updateModel(ImageModels.animeDiffusionV45Full, persist: false);
       params.updateSize(1024, 1024, persist: false);
       params.updateSteps(28);
       params.updateSmea(false);
@@ -470,6 +473,9 @@ void main() {
 
       final rawImage = Uint8List.fromList([1, 2, 3]);
       final params = container.read(generationParamsNotifierProvider.notifier);
+      // V5 has no Vibe Transfer capability; use the V4.5 contract to test
+      // the enabled/uncached encoding surcharge itself.
+      params.updateModel(ImageModels.animeDiffusionV45Full, persist: false);
       params.updateSize(512, 768, persist: false);
       params.updateSteps(28);
       params.setVibeReferences([
@@ -500,6 +506,9 @@ void main() {
       );
 
       final params = container.read(generationParamsNotifierProvider.notifier);
+      // V5 has no Vibe Transfer capability; use the V4.5 contract to test
+      // the per-request surcharge for the fifth enabled Vibe.
+      params.updateModel(ImageModels.animeDiffusionV45Full, persist: false);
       params.updateSize(512, 768, persist: false);
       params.updateSteps(28);
       params.setVibeReferences(

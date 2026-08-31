@@ -1187,6 +1187,12 @@ abstract class AppLocalizations {
   /// **'Images'**
   String get settings_storageImagesSection;
 
+  /// No description provided for @settings_projectWorkspace.
+  ///
+  /// In en, this message translates to:
+  /// **'Project workspace'**
+  String get settings_projectWorkspace;
+
   /// No description provided for @settings_storageLibrariesSection.
   ///
   /// In en, this message translates to:

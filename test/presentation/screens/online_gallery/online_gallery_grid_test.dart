@@ -226,6 +226,10 @@ void main() {
 
     expect(snapshot.placementFor(0).scrollOffset, 0);
     expect(snapshot.placementFor(1).scrollOffset, 0);
+    // Every card in the first masonry row must be built at the top of the
+    // viewport. Returning only index 0 here hides cards in the other columns
+    // until the user scrolls, which also breaks page-jump anchors.
+    expect(snapshot.maxIndexForScrollOffset(0), 1);
     expect(snapshot.placementFor(2).scrollOffset, 86);
     expect(snapshot.placementFor(2).mainAxisExtent, 200);
     expect(snapshot.minIndexForScrollOffset(120), 2);

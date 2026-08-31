@@ -220,6 +220,7 @@
   "settings_appearanceInterfaceSection": "Interface",
   "settings_appearanceWorkflowSection": "Generation workflow",
   "settings_storageImagesSection": "Images",
+  "settings_projectWorkspace": "Project workspace",
   "settings_storageLibrariesSection": "Models and libraries",
   "settings_storageCacheSection": "Cache maintenance",
   "settings_networkProxySection": "Proxy connection",

@@ -92,7 +92,16 @@ class MainNavRail extends ConsumerWidget {
       queueExecutionNotifierProvider.select((state) => state.status),
     );
     final currentIndex = navigationShell.currentIndex;
-    final isStyleLab = GoRouterState.of(context).uri.path == AppRoutes.styleLab;
+    // DesktopShell normally lives below a GoRoute builder, but keeping the
+    // rail renderable without that inherited state makes it safe to preview
+    // and test as a standalone shell as well. Route callbacks still require
+    // the real router; only the selected-style-lab decoration falls back.
+    var isStyleLab = false;
+    try {
+      isStyleLab = GoRouterState.of(context).uri.path == AppRoutes.styleLab;
+    } on GoError {
+      isStyleLab = false;
+    }
     final selectedIndex = _railBranches.indexWhere(
       (branch) => branch.index == currentIndex,
     );

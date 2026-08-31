@@ -311,7 +311,12 @@ class _OnlineGalleryContentPresenter {
       itemWidth: itemWidth,
       columnCount: columnCount,
       scrolling: _controller.scrolling,
-      initiallyLoadMedia: _controller.hasViewedItem(post.stableKey),
+      // Reveal the first masonry row eagerly. VisibilityDetector will still
+      // gate every later card, but waiting for its post-frame callback on the
+      // initial row leaves the gallery showing placeholders (and makes page
+      // jump anchors unavailable for one frame).
+      initiallyLoadMedia:
+          _controller.hasViewedItem(post.stableKey) || index < columnCount,
       anchorKey:
           (state.randomEnabled ? state.randomSession.cache : state.currentCache)
               .isPageBoundaryStart(index)

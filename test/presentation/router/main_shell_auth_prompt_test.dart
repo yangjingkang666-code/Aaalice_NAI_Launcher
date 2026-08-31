@@ -194,6 +194,12 @@ void main() {
     );
     await tester.tap(moreDestination);
     await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('mobile-more-agent')), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('mobile-more-discord')),
+      180,
+      scrollable: find.byType(Scrollable).last,
+    );
     expect(find.byKey(const ValueKey('mobile-more-discord')), findsOneWidget);
     expect(find.byKey(const ValueKey('mobile-more-github')), findsOneWidget);
     expect(tester.takeException(), isNull);

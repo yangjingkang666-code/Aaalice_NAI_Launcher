@@ -36,6 +36,14 @@ void main() {
 
     await tester.tap(find.text('添加操作'));
     await tester.pumpAndSettle();
-    expect(find.byType(Card), findsNWidgets(3));
+    final operationCards = find.byWidgetPredicate(
+      (widget) =>
+          widget is Card &&
+          widget.key is ValueKey<String> &&
+          (widget.key! as ValueKey<String>).value.startsWith(
+            'prompt-patch-operation-',
+          ),
+    );
+    expect(operationCards, findsNWidgets(2));
   });
 }

@@ -214,6 +214,7 @@
   "settings_appearanceInterfaceSection": "介面呈現",
   "settings_appearanceWorkflowSection": "生成頁互動",
   "settings_storageImagesSection": "圖片",
+  "settings_projectWorkspace": "專案工作區",
   "settings_storageLibrariesSection": "模型與資源庫",
   "settings_storageCacheSection": "快取維護",
   "settings_networkProxySection": "代理連線",

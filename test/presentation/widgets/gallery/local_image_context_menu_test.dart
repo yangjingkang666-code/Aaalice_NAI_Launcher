@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nai_launcher/core/platform/platform_capabilities.dart';
 import 'package:nai_launcher/l10n/app_localizations.dart';
 import 'package:nai_launcher/presentation/widgets/gallery/local_image_context_menu.dart';
 
 void main() {
+  setUp(() {
+    PlatformCapabilities.debugOverride = PlatformCapabilities.forPlatform(
+      TargetPlatform.windows,
+    );
+  });
+
+  tearDown(() => PlatformCapabilities.debugOverride = null);
+
   testWidgets('shows direct send actions in the agreed order', (tester) async {
     LocalImageContextAction? selected;
 
@@ -26,6 +35,7 @@ void main() {
         .toList();
 
     expect(items.map((item) => item.value).toList(), const [
+      LocalImageContextAction.addToAgent,
       LocalImageContextAction.sendToTextToImage,
       LocalImageContextAction.sendToImg2Img,
       LocalImageContextAction.sendToReversePrompt,

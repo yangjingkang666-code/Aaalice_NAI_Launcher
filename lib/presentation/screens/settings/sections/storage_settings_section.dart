@@ -398,7 +398,7 @@ class _StorageSettingsSectionState
               // 可选项目工作区：启用后图片与 Prompt Recipe 按项目隔离。
               ListTile(
                 leading: const Icon(Icons.folder_special_outlined),
-                title: Text(context.l10n.settings_imageSavePath),
+                title: Text(context.l10n.settings_projectWorkspace),
                 subtitle: Text(
                   projectState.current == null
                       ? context.l10n.settings_defaultImagesPath

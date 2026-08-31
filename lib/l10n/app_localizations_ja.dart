@@ -582,6 +582,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settings_storageImagesSection => '画像';
 
   @override
+  String get settings_projectWorkspace => 'プロジェクトワークスペース';
+
+  @override
   String get settings_storageLibrariesSection => 'モデルとライブラリ';
 
   @override

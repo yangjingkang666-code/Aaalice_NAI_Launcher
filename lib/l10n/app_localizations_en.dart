@@ -591,6 +591,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settings_storageImagesSection => 'Images';
 
   @override
+  String get settings_projectWorkspace => 'Project workspace';
+
+  @override
   String get settings_storageLibrariesSection => 'Models and libraries';
 
   @override

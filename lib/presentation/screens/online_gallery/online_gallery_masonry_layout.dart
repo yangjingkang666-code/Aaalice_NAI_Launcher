@@ -122,7 +122,7 @@ class OnlineGalleryMasonryLayoutSnapshot {
   }
 
   int maxIndexForScrollOffset(double scrollOffset) {
-    if (_placements.isEmpty || scrollOffset <= 0) return 0;
+    if (_placements.isEmpty || scrollOffset < 0) return 0;
     var low = 0;
     var high = _leadingOffsets.length;
     while (low < high) {

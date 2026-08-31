@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image/image.dart' as img;
 import 'package:mocktail/mocktail.dart';
+import 'package:nai_launcher/core/constants/api_constants.dart';
 import 'package:nai_launcher/core/utils/image_save_utils.dart';
 import 'package:nai_launcher/core/constants/storage_keys.dart';
 import 'package:nai_launcher/data/datasources/remote/nai_image_enhancement_api_service.dart';
@@ -1491,6 +1492,9 @@ void main() {
       final paramsNotifier = container.read(
         generationParamsNotifierProvider.notifier,
       );
+      // V5 intentionally has no Vibe Transfer capability; select V4.5 so
+      // this test exercises the request-time encoding path.
+      paramsNotifier.updateModel(ImageModels.animeDiffusionV45Full, persist: false);
       final rawImage = _validImageBytes(width: 256, height: 256);
       paramsNotifier.addVibeReference(
         VibeReference(
@@ -1591,6 +1595,9 @@ void main() {
       final paramsNotifier = container.read(
         generationParamsNotifierProvider.notifier,
       );
+      // V5 intentionally has no Vibe Transfer capability; select V4.5 so
+      // this test exercises re-encoding after the metadata change.
+      paramsNotifier.updateModel(ImageModels.animeDiffusionV45Full, persist: false);
       final rawImage = _validImageBytes(width: 256, height: 256);
       paramsNotifier.addVibeReference(
         VibeReference(

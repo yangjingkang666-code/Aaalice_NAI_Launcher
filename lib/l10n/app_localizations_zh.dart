@@ -568,6 +568,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settings_storageImagesSection => '图像';
 
   @override
+  String get settings_projectWorkspace => '项目工作区';
+
+  @override
   String get settings_storageLibrariesSection => '模型与资源库';
 
   @override
@@ -14065,6 +14068,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get settings_storageImagesSection => '圖片';
+
+  @override
+  String get settings_projectWorkspace => '專案工作區';
 
   @override
   String get settings_storageLibrariesSection => '模型與資源庫';

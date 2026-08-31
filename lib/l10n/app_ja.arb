@@ -211,6 +211,7 @@
   "settings_appearanceInterfaceSection": "インターフェース",
   "settings_appearanceWorkflowSection": "生成画面の操作",
   "settings_storageImagesSection": "画像",
+  "settings_projectWorkspace": "プロジェクトワークスペース",
   "settings_storageLibrariesSection": "モデルとライブラリ",
   "settings_storageCacheSection": "キャッシュ管理",
   "settings_networkProxySection": "プロキシ接続",

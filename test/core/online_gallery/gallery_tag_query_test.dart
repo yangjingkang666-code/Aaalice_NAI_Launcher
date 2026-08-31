@@ -237,7 +237,10 @@ void main() {
         gallerySourceCapabilities[GallerySourceId.aiTag]!.tagSearch.serverLimit(
           authenticated: false,
         ),
-        1,
+        // AI TAG now accepts the same six-tag query window used by the
+        // residual planner. Keep this assertion aligned with the source
+        // capability contract rather than the pre-agent one-tag limit.
+        6,
       );
       expect(
         gallerySourceCapabilities[GallerySourceId.quickTagCloud]!.tagSearch

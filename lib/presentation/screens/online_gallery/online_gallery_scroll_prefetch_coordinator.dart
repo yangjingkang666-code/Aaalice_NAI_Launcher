@@ -307,6 +307,13 @@ class OnlineGalleryScrollPrefetchCoordinator {
   void endPageJump() {
     final wasInProgress = _pageJumpInProgress;
     _pageJumpInProgress = false;
+    // A programmatic page jump is complete once its anchor has been placed;
+    // do not leave the viewport in the transient scrolling state while the
+    // first row is being rebuilt. Otherwise visibility-driven cards remain
+    // deferred until the idle timer fires, making the new page look empty.
+    controller.scrollStopTimer?.cancel();
+    controller.scrollStopTimer = null;
+    controller.setScrolling(false);
     _visiblePageUpdateRevision++;
     if (wasInProgress) {
       _scheduleVisiblePageUpdate();

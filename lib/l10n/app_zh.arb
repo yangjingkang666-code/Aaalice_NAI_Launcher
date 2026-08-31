@@ -220,6 +220,7 @@
   "settings_appearanceInterfaceSection": "界面呈现",
   "settings_appearanceWorkflowSection": "生成页交互",
   "settings_storageImagesSection": "图像",
+  "settings_projectWorkspace": "项目工作区",
   "settings_storageLibrariesSection": "模型与资源库",
   "settings_storageCacheSection": "缓存维护",
   "settings_networkProxySection": "代理连接",

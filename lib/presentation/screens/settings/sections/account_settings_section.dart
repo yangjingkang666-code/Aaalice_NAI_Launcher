@@ -27,19 +27,41 @@ class _AccountSettingsSectionState
     extends ConsumerState<AccountSettingsSection> {
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authNotifierProvider);
     final accountTile = AccountDetailTile(
       onEdit: () => _showProfileSheet(context),
       onLogin: () => _navigateToLogin(context),
     );
+    final showLogout = authState.isAuthenticated && authState.accountId != null;
 
     return SettingsPageLayout(
       title: context.l10n.settings_account,
       children: [
         SettingsCard(
           title: context.l10n.settings_accountDetailsSection,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: accountTile,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: accountTile,
+              ),
+              if (showLogout)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    key: const Key('account-settings-logout-button'),
+                    onPressed: () => ref
+                        .read(authNotifierProvider.notifier)
+                        .logout(),
+                    icon: const Icon(Icons.logout_rounded),
+                    label: Text(context.l10n.auth_logout),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ],
