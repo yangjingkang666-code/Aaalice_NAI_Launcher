@@ -9,6 +9,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../core/utils/app_logger.dart';
 import '../../core/utils/file_name_sanitizer.dart';
 import '../../core/utils/novelai_vibe_codec.dart';
+import '../../core/utils/vibe_image_embedder.dart';
 import '../models/vibe/vibe_export_format.dart';
 import '../models/vibe/vibe_library_entry.dart';
 import '../models/vibe/vibe_reference.dart';
@@ -27,7 +28,12 @@ typedef ExportProgressCallback =
 ///
 /// 负责将 Vibe 库条目导出为不同格式
 class VibeExportService {
+  VibeExportService({Future<String> Function()? exportDirectoryResolver})
+    : _exportDirectoryResolver = exportDirectoryResolver;
+
   static const String _tag = 'VibeExport';
+
+  final Future<String> Function()? _exportDirectoryResolver;
 
   /// 导出为 Bundle 格式
   ///
@@ -89,12 +95,58 @@ class VibeExportService {
     VibeLibraryEntry entry, {
     required VibeExportOptions options,
   }) async {
-    // 嵌入图片格式暂不支持批量导出，仅支持单个导出
-    AppLogger.w(
-      'exportAsEmbeddedImage not implemented yet - entry: ${entry.displayName}',
-      _tag,
-    );
-    return null;
+    final targetPath = options.targetImagePath?.trim();
+    if (targetPath == null || targetPath.isEmpty) {
+      AppLogger.w('Embedded image export requires a carrier image', _tag);
+      return null;
+    }
+
+    final stopwatch = Stopwatch()..start();
+    try {
+      final carrier = File(targetPath);
+      if (!await carrier.exists()) {
+        AppLogger.w('Carrier image does not exist: $targetPath', _tag);
+        return null;
+      }
+
+      final reference = entry.toVibeReference().copyWith(
+        vibeEncoding: options.includeEncoding ? entry.vibeEncoding : '',
+        thumbnail: options.includeThumbnail ? entry.vibeThumbnail : null,
+      );
+      final embeddedBytes = await VibeImageEmbedder.embedVibeToImage(
+        await carrier.readAsBytes(),
+        reference,
+      );
+
+      final outputDirectory = Directory(await _getExportDirectory());
+      await outputDirectory.create(recursive: true);
+      final fileName = _generateFileName(
+        options.fileName,
+        '${entry.displayName}_vibe',
+        'png',
+      );
+      var outputFile = File(p.join(outputDirectory.path, fileName));
+      if (p.equals(outputFile.absolute.path, carrier.absolute.path)) {
+        outputFile = File(
+          p.join(
+            outputDirectory.path,
+            _generateFileName(null, '${entry.displayName}_vibe', 'png'),
+          ),
+        );
+      }
+      await outputFile.writeAsBytes(embeddedBytes, flush: true);
+
+      stopwatch.stop();
+      AppLogger.i(
+        'Embedded image export completed: ${entry.displayName} in ${stopwatch.elapsedMilliseconds}ms',
+        _tag,
+      );
+      return outputFile.path;
+    } catch (e, stackTrace) {
+      stopwatch.stop();
+      AppLogger.e('Embedded image export failed', e, stackTrace, _tag);
+      return null;
+    }
   }
 
   /// 导出为纯编码格式
@@ -233,6 +285,11 @@ class VibeExportService {
 
   /// 获取导出目录
   Future<String> _getExportDirectory() async {
+    final resolver = _exportDirectoryResolver;
+    if (resolver != null) {
+      return resolver();
+    }
+
     try {
       final downloadsDir = await getDownloadsDirectory();
       if (downloadsDir != null) {

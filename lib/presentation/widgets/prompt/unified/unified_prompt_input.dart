@@ -9,6 +9,7 @@ import 'package:nai_launcher/core/utils/localization_extension.dart';
 
 import '../../../../core/utils/nai_prompt_formatter.dart';
 import '../../../../core/utils/prompt_regex_replacer.dart';
+import '../../../../core/utils/prompt_replace_cleanup.dart';
 import '../../../../core/utils/sd_to_nai_converter.dart';
 import '../../../../data/models/character/character_prompt.dart';
 import '../../../../data/services/alias_resolver_service.dart';
@@ -850,10 +851,13 @@ class _UnifiedPromptInputState extends ConsumerState<UnifiedPromptInput> {
     }
     buffer.write(source.substring(cursor));
 
-    final newText = _postProcessReplacedText(buffer.toString());
-    _applyReplacedText(
-      newText,
+    final cleaned = _postProcessReplacedText(
+      buffer.toString(),
       caretOffset: caretOffset,
+    );
+    _applyReplacedText(
+      cleaned.text,
+      caretOffset: cleaned.caretOffset,
       selectNextMatch: false,
       // 全部替换是一次性的批量改写，纳入外部历史栈后可用助手浮层撤销。
       recordHistory: true,
@@ -869,9 +873,11 @@ class _UnifiedPromptInputState extends ConsumerState<UnifiedPromptInput> {
   /// 提示词是逗号分隔的标签串，把某个标签整体替换为空串后会残留
   /// `alpha, , beta` 这样的空位。这里决定要不要以及如何收拾残局。
   ///
-  /// TODO(用户实现)：见下方说明，可选择保持原样、收敛空标签，或整体格式化。
-  String _postProcessReplacedText(String text) {
-    return text;
+  PromptReplaceCleanupResult _postProcessReplacedText(
+    String text, {
+    required int caretOffset,
+  }) {
+    return cleanPromptAfterReplaceAll(text, caretOffset: caretOffset);
   }
 
   /// 写回替换结果，并保持内部/外部控制器与搜索高亮一致。
