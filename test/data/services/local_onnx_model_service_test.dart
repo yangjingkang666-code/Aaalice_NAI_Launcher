@@ -83,6 +83,38 @@ void main() {
   );
 
   test(
+    'identifies JoyTag and WD bundles from companion vocabularies',
+    () async {
+      final modelDirectory = await Directory(
+        p.join(tempDirectory.path, 'models'),
+      ).create();
+      await File(p.join(modelDirectory.path, 'joytag.onnx')).writeAsBytes([1]);
+      await File(
+        p.join(modelDirectory.path, 'top_tags.txt'),
+      ).writeAsString('1girl\n');
+      await File(
+        p.join(modelDirectory.path, 'wd-eva02.onnx'),
+      ).writeAsBytes([2]);
+      await File(
+        p.join(modelDirectory.path, 'selected_tags.csv'),
+      ).writeAsString('name,category\ntag,0\n');
+
+      final models = await service.scanTaggerModels(
+        directoryPath: modelDirectory.path,
+      );
+      final byName = {for (final model in models) model.name: model};
+
+      expect(byName['joytag.onnx']?.kind, LocalOnnxModelKind.joyTag);
+      expect(byName['joytag.onnx']?.labelsPath, endsWith('top_tags.txt'));
+      expect(byName['wd-eva02.onnx']?.kind, LocalOnnxModelKind.wd14Tagger);
+      expect(
+        byName['wd-eva02.onnx']?.labelsPath,
+        endsWith('selected_tags.csv'),
+      );
+    },
+  );
+
+  test(
     'recovers an interrupted replacement before the next operation',
     () async {
       final managedDirectory = Directory(

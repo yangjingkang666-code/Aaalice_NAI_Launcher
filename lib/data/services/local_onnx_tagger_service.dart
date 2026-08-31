@@ -234,7 +234,7 @@ class LocalOnnxTaggerService {
       );
     }
 
-    final labels = await loadLabels(model.labelsPath!);
+    final labels = await _loadLabelsForModel(model);
     if (labels.isEmpty) {
       throw StateError('标签文件为空: ${model.labelsPath}');
     }
@@ -307,6 +307,27 @@ class LocalOnnxTaggerService {
       return _parseCsvLabels(raw);
     }
     return _parseTextLabels(raw);
+  }
+
+  Future<List<OnnxTaggerLabel>> _loadLabelsForModel(
+    LocalOnnxModelDescriptor model,
+  ) async {
+    final labels = await loadLabels(model.labelsPath!);
+    if (!_isJoyTag(model)) {
+      return labels;
+    }
+
+    // JoyTag ships a flat top_tags.txt vocabulary without WD-style category
+    // columns. Treat those entries as general tags so they are not discarded
+    // by the category filter below.
+    return labels
+        .map(
+          (label) => OnnxTaggerLabel(
+            name: label.name,
+            category: label.category ?? 'general',
+          ),
+        )
+        .toList(growable: false);
   }
 
   Future<_OnnxSessionHandle> _createSession(
@@ -570,7 +591,8 @@ class LocalOnnxTaggerService {
 
   int _resolveInputSize(LocalOnnxModelDescriptor model) {
     final lower = model.name.toLowerCase();
-    if (_isClTaggerV2(model)) {
+    if (_isJoyTag(model) || _isClTaggerV2(model)) {
+      if (_isJoyTag(model)) return 448;
       return 384;
     }
     if (_isClTagger(model)) {
@@ -594,6 +616,18 @@ class LocalOnnxTaggerService {
         lowerPath.contains('cl_tagger_v2') ||
         lowerPath.contains('cl-tagger-v2') ||
         lowerLabels.endsWith('model_vocabulary.json');
+  }
+
+  bool _isJoyTag(LocalOnnxModelDescriptor model) {
+    final lowerName = model.name.toLowerCase();
+    final lowerPath = model.path.toLowerCase();
+    final lowerLabels = model.labelsPath?.toLowerCase() ?? '';
+    return model.kind == LocalOnnxModelKind.joyTag ||
+        lowerName.contains('joytag') ||
+        lowerName.contains('joy-tag') ||
+        lowerPath.contains('joytag') ||
+        lowerPath.contains('joy-tag') ||
+        lowerLabels.endsWith('top_tags.txt');
   }
 
   bool _isClTagger(LocalOnnxModelDescriptor model) {
@@ -631,6 +665,31 @@ class LocalOnnxTaggerService {
     );
 
     final data = Float32List(inputSize * inputSize * 3);
+    if (_isJoyTag(model)) {
+      const meanR = 0.48145466;
+      const meanG = 0.4578275;
+      const meanB = 0.40821073;
+      const stdR = 0.26862954;
+      const stdG = 0.26130258;
+      const stdB = 0.27577711;
+      final planeSize = inputSize * inputSize;
+      var rOffset = 0;
+      var gOffset = planeSize;
+      var bOffset = planeSize * 2;
+      for (var y = 0; y < inputSize; y++) {
+        for (var x = 0; x < inputSize; x++) {
+          final pixel = resized.getPixel(x, y);
+          final red = pixel.r.toDouble() / 255.0;
+          final green = pixel.g.toDouble() / 255.0;
+          final blue = pixel.b.toDouble() / 255.0;
+          data[rOffset++] = (red - meanR) / stdR;
+          data[gOffset++] = (green - meanG) / stdG;
+          data[bOffset++] = (blue - meanB) / stdB;
+        }
+      }
+      return _OnnxImageInput(data: data, shape: [1, 3, inputSize, inputSize]);
+    }
+
     if (_isClTaggerV2(model)) {
       final planeSize = inputSize * inputSize;
       var rOffset = 0;

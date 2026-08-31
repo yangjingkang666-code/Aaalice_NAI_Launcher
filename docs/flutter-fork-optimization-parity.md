@@ -23,7 +23,7 @@
 
 1. 队列任务保存完整的 `GenerationSnapshot`，包含 Prompt、角色和参考输入；历史任务缺少结构化语义时会兼容回退到本地分类/其他。
 2. AI 批量计划禁止 `request:*` 参数和身份类别。批量计划只创建队列任务，不调用生成引擎；队列仍由既有串行 Scheduler 执行。
-3. JoyTag 与 WD EVA02 不随安装包捆绑，也不会在反推入口静默下载。用户在设置中导入模型文件后，服务通过文件名（`joytag`、`eva02`/`wd14`）识别角色；缺少任一模型时原有云端直反推仍可用。
+3. JoyTag 与 WD EVA02 不随安装包捆绑，也不会在反推入口静默下载。用户在设置中导入模型文件后，服务通过文件名或伴随词表识别角色：JoyTag 使用 `joytag*.onnx` + `top_tags.txt`，WD EVA02 使用 `wd/eva02/wd14*.onnx` + `selected_tags.csv`；缺少任一模型时原有云端直反推仍可用。
 4. 设置页会在推理前检查模型文件与标签文件是否存在且可解析；模型管理器不联网、不自动下载，未识别的文件会明确标记。
 5. Windows 本地推理按设置优先尝试 DirectML；驱动、算子、运行库初始化或推理失败时重建 CPU 会话，并把实际 provider 写入双模型审计证据。
 6. 本地 tagger 失败不会清除另一模型或已有云端证据；两个模型都失败时才停止双本地阶段，并显示可读错误。
@@ -31,6 +31,22 @@
 8. 结构化反推如果遇到不支持 JSON 的 Provider，会保留纯文本结果并显示降级警告，不伪造语义或负面 Prompt 字段。
 9. 反推链每次运行都有独立代次；取消或重新开始后，旧阶段即使在后台完成也不能发布到当前状态。
 10. Prompt Assistant 的翻译、优化和角色替换共享会话代次；只有当前代次的流式结果才允许写入编辑器、状态和历史栈。
+
+## 真实模型冒烟
+
+模型不随仓库或安装包提交。发布前可把用户自己下载的模型放在临时目录，并运行手动测试验证真实 ONNX 推理、标签词表解析和实际执行 provider：
+
+```powershell
+$env:NAI_ONNX_TAGGER_SMOKE = '1'
+$env:NAI_JOYTAG_MODEL = 'C:\models\joytag.onnx'
+$env:NAI_JOYTAG_LABELS = 'C:\models\top_tags.txt'
+$env:NAI_WD_EVA02_MODEL = 'C:\models\wd-eva02-large-tagger-v3.onnx'
+$env:NAI_WD_EVA02_LABELS = 'C:\models\selected_tags.csv'
+$env:NAI_ONNX_IMAGE = 'C:\models\sample.png'
+flutter test --no-pub test/manual/local_onnx_tagger_smoke_test.dart
+```
+
+`NAI_ONNX_TAGGER_PREFERENCE=cpu` 可强制 CPU；不设置时 Windows 优先尝试 DirectML，并在输出中打印实际 provider 和耗时。
 
 ## 验证命令
 

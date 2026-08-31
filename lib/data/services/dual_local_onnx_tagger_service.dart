@@ -106,14 +106,20 @@ class DualLocalOnnxTaggerService {
 
   static DualLocalTaggerRole? roleFor(LocalOnnxModelDescriptor model) {
     final value = '${model.name} ${model.path}'.toLowerCase();
-    if (value.contains('joytag') || value.contains('joy-tag')) {
+    final labelsPath = model.labelsPath?.toLowerCase() ?? '';
+    if (model.kind == LocalOnnxModelKind.joyTag ||
+        value.contains('joytag') ||
+        value.contains('joy-tag') ||
+        labelsPath.endsWith('top_tags.txt')) {
       return DualLocalTaggerRole.joyTag;
     }
-    if (value.contains('eva02') ||
+    if (model.kind == LocalOnnxModelKind.wd14Tagger ||
+        value.contains('eva02') ||
         value.contains('eva-02') ||
         value.contains('wd-eva') ||
         value.contains('wd14') ||
-        value.contains('wd-v1-')) {
+        value.contains('wd-v1-') ||
+        labelsPath.endsWith('selected_tags.csv')) {
       return DualLocalTaggerRole.wdEva02;
     }
     return null;

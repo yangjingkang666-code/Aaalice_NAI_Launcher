@@ -39,6 +39,34 @@ void main() {
     },
   );
 
+  test('resolves generic model filenames from companion vocabularies', () {
+    const genericJoy = LocalOnnxModelDescriptor(
+      name: 'model.onnx',
+      path: r'C:\models\model.onnx',
+      kind: LocalOnnxModelKind.joyTag,
+      labelsPath: r'C:\models\top_tags.txt',
+    );
+    const genericWd = LocalOnnxModelDescriptor(
+      name: 'wd-model.onnx',
+      path: r'C:\models\wd-model.onnx',
+      kind: LocalOnnxModelKind.wd14Tagger,
+      labelsPath: r'C:\models\selected_tags.csv',
+    );
+
+    expect(
+      DualLocalOnnxTaggerService.roleFor(genericJoy),
+      DualLocalTaggerRole.joyTag,
+    );
+    expect(
+      DualLocalOnnxTaggerService.roleFor(genericWd),
+      DualLocalTaggerRole.wdEva02,
+    );
+    expect(
+      DualLocalOnnxTaggerService.findPair([genericJoy, genericWd]),
+      isNotNull,
+    );
+  });
+
   test(
     'runs both models sequentially and preserves an individual failure',
     () async {

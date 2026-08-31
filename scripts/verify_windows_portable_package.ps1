@@ -104,7 +104,11 @@ if ($PSCmdlet.ParameterSetName -eq 'Directory') {
 
   $entriesByPath = @{}
   foreach ($file in Get-ChildItem -LiteralPath $resolvedDirectory -File -Recurse) {
-    $relativePath = [IO.Path]::GetRelativePath($resolvedDirectory, $file.FullName)
+    # Windows PowerShell 5.1 uses .NET Framework, which does not provide
+    # [IO.Path]::GetRelativePath (introduced in .NET Core).  Every file comes
+    # from Get-ChildItem under the resolved directory, so a normalized prefix
+    # subtraction is both compatible and deterministic here.
+    $relativePath = $file.FullName.Substring($resolvedDirectory.Length).TrimStart([char[]]@('\', '/'))
     $normalized = ConvertTo-PortablePath $relativePath
     if ($entriesByPath.ContainsKey($normalized)) {
       throw "Portable package directory contains a duplicate path: $normalized"

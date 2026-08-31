@@ -24,7 +24,7 @@ function Write-FixtureManifest {
     Get-ChildItem -LiteralPath $fixturePath -File -Recurse |
       Where-Object { $_.Name -ne 'app_files_manifest.json' } |
       ForEach-Object {
-        [IO.Path]::GetRelativePath($fixturePath, $_.FullName).Replace('\', '/')
+        $_.FullName.Substring($fixturePath.Length).TrimStart([char[]]@('\', '/')).Replace('\', '/')
       } |
       Sort-Object
   )
@@ -101,7 +101,7 @@ function Assert-Rejected {
     if ($null -eq $failure) {
       throw "$Name should fail for $target input, but passed."
     }
-    if (-not $failure.Contains($ExpectedError, [StringComparison]::OrdinalIgnoreCase)) {
+    if ($failure.IndexOf($ExpectedError, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
       throw "$Name failed for $target input with an unexpected error: $failure"
     }
   }
@@ -135,10 +135,10 @@ function Assert-PackagerChecksRuntimeBeforeReplacingManifest {
   if ($null -eq $failure) {
     throw 'Packager should reject a bundle with a missing runtime file.'
   }
-  if (-not $failure.Contains(
+  if ($failure.IndexOf(
       'Windows Flutter runtime file was not found:',
       [StringComparison]::OrdinalIgnoreCase
-    )) {
+    ) -lt 0) {
     throw "Packager failed with an unexpected error: $failure"
   }
   if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {

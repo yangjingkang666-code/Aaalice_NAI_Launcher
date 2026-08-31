@@ -9,7 +9,7 @@ import '../../core/constants/storage_keys.dart';
 import '../../core/storage/local_storage_service.dart';
 import '../../core/utils/app_logger.dart';
 
-enum LocalOnnxModelKind { wd14Tagger, clTagger, unknown }
+enum LocalOnnxModelKind { joyTag, wd14Tagger, clTagger, unknown }
 
 class LocalOnnxImportSource {
   const LocalOnnxImportSource({required this.name, required this.path});
@@ -322,6 +322,7 @@ class LocalOnnxModelService {
     return _scanModels(
       directoryPath ?? taggerDirectory,
       allowedKinds: const {
+        LocalOnnxModelKind.joyTag,
         LocalOnnxModelKind.wd14Tagger,
         LocalOnnxModelKind.clTagger,
         LocalOnnxModelKind.unknown,
@@ -348,7 +349,8 @@ class LocalOnnxModelService {
       if (entity is! File) continue;
       if (p.extension(entity.path).toLowerCase() != '.onnx') continue;
 
-      final kind = _inferKind(entity.path);
+      final labelsPath = await _findLabelsFile(entity.path);
+      final kind = _inferKind(entity.path, labelsPath: labelsPath);
       if (!allowedKinds.contains(kind)) continue;
 
       result.add(
@@ -356,7 +358,7 @@ class LocalOnnxModelService {
           name: p.basename(entity.path),
           path: entity.path,
           kind: kind,
-          labelsPath: await _findLabelsFile(entity.path),
+          labelsPath: labelsPath,
         ),
       );
     }
@@ -394,14 +396,24 @@ class LocalOnnxModelService {
     return false;
   }
 
-  LocalOnnxModelKind _inferKind(String filePath) {
+  LocalOnnxModelKind _inferKind(String filePath, {String? labelsPath}) {
     final lower = p.basenameWithoutExtension(filePath).toLowerCase();
+    final lowerPath = filePath.toLowerCase();
+    final lowerLabels = labelsPath?.toLowerCase() ?? '';
+    if (lower.contains('joytag') ||
+        lower.contains('joy-tag') ||
+        lowerPath.contains('joytag') ||
+        lowerPath.contains('joy-tag') ||
+        lowerLabels.endsWith('top_tags.txt')) {
+      return LocalOnnxModelKind.joyTag;
+    }
     if (lower.contains('wd14') ||
         lower.contains('wd-v1-4') ||
         lower.contains('wd-v1-5') ||
         lower.contains('convnext') ||
         lower.contains('vit') ||
-        lower.contains('swinv2')) {
+        lower.contains('swinv2') ||
+        lowerLabels.endsWith('selected_tags.csv')) {
       return LocalOnnxModelKind.wd14Tagger;
     }
     if (lower.contains('cl') && lower.contains('tagger')) {
@@ -429,8 +441,24 @@ class LocalOnnxModelService {
       }
     }
 
-    for (final name in const [
+    final preferredNames = <String>[];
+    if (lowerBaseName.contains('joytag') || lowerBaseName.contains('joy-tag')) {
+      preferredNames.add('top_tags.txt');
+    }
+    if (lowerBaseName.contains('wd14') ||
+        lowerBaseName.contains('wd-v1-4') ||
+        lowerBaseName.contains('wd-v1-5') ||
+        lowerBaseName.contains('eva02') ||
+        lowerBaseName.contains('eva-02') ||
+        lowerBaseName.contains('convnext') ||
+        lowerBaseName.contains('swinv2') ||
+        lowerBaseName.contains('vit')) {
+      preferredNames.add('selected_tags.csv');
+    }
+    for (final name in [
+      ...preferredNames,
       'selected_tags.csv',
+      'top_tags.txt',
       'tags.csv',
       'labels.csv',
       'labels.txt',
