@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nai_launcher/data/services/dual_local_onnx_tagger_service.dart';
 import 'package:nai_launcher/data/services/local_onnx_model_service.dart';
 import 'package:nai_launcher/data/services/local_onnx_tagger_service.dart';
+import 'package:nai_launcher/data/services/local_tagger_execution_strategy.dart';
 
 void main() {
   const joy = LocalOnnxModelDescriptor(
@@ -55,6 +56,7 @@ void main() {
               return OnnxTaggerResult(
                 model: model,
                 tags: const [OnnxTaggerTag(name: '1girl', score: .99)],
+                executionProvider: LocalTaggerExecutionProvider.directMl,
               );
             },
       );
@@ -66,6 +68,7 @@ void main() {
       expect(calls, [joy.name, wd.name]);
       expect(result.hasSuccess, isTrue);
       expect(result.combinedPrompt, '1girl');
+      expect(result.evidence.first.device, contains('DirectML'));
       expect(result.evidence.last.succeeded, isFalse);
       expect(result.auditText, contains('WD EVA02'));
     },

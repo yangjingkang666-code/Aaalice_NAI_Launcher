@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'local_onnx_model_service.dart';
 import 'local_onnx_tagger_service.dart';
+import 'local_tagger_execution_strategy.dart';
 
 final dualLocalOnnxTaggerServiceProvider = Provider<DualLocalOnnxTaggerService>(
   (ref) => DualLocalOnnxTaggerService(
@@ -177,7 +178,7 @@ class DualLocalOnnxTaggerService {
           DualLocalTaggerEvidence(
             role: item.$1,
             model: item.$2,
-            device: 'ONNX Runtime（本地）',
+            device: 'ONNX Runtime · ${result.executionProvider.displayName}',
             tags: result.tags,
           ),
         );
@@ -186,7 +187,7 @@ class DualLocalOnnxTaggerService {
           DualLocalTaggerEvidence(
             role: item.$1,
             model: item.$2,
-            device: 'ONNX Runtime（本地）',
+            device: 'ONNX Runtime · CPU（失败）',
             error: error.toString(),
           ),
         );

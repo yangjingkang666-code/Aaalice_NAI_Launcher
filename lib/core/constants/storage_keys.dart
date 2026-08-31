@@ -381,6 +381,8 @@ class StorageKeys {
   static const String reversePromptCharacterConfigJson =
       'reverse_prompt_character_config_json';
   static const String onnxTaggerModelDirectory = 'onnx_tagger_model_directory';
+  static const String onnxTaggerExecutionPreference =
+      'onnx_tagger_execution_preference';
 
   // 保护模式设置
   static const String protectionMode = 'protection_mode';

@@ -11,6 +11,8 @@ import '../../../../data/models/character/character_prompt.dart';
 import '../../../../data/models/tag_library/tag_library_entry.dart';
 import '../../../../data/services/dual_local_onnx_tagger_service.dart';
 import '../../../../data/services/local_onnx_model_service.dart';
+import '../../../../data/services/local_tagger_execution_strategy.dart';
+import '../../../../data/services/local_tagger_manager_service.dart';
 import '../../../providers/generation/generation_panel_expansion_provider.dart';
 import '../../../providers/generation/generation_params_notifier.dart';
 import '../../../providers/reverse_prompt_provider.dart';
@@ -397,10 +399,13 @@ class _ReversePromptPanelState extends ConsumerState<ReversePromptPanel> {
   }
 
   Widget _buildDualTaggerControls(ReversePromptState state) {
-    return FutureBuilder<List<LocalOnnxModelDescriptor>>(
-      future: ref.read(localOnnxModelServiceProvider).scanTaggerModels(),
+    return FutureBuilder<LocalTaggerEnvironmentStatus>(
+      future: ref.read(localTaggerManagerServiceProvider).inspect(),
       builder: (context, snapshot) {
-        final models = snapshot.data ?? const <LocalOnnxModelDescriptor>[];
+        final status = snapshot.data;
+        final models = status == null
+            ? const <LocalOnnxModelDescriptor>[]
+            : status.models.map((model) => model.model).toList(growable: false);
         final joyModels = models
             .where(
               (model) =>
@@ -470,6 +475,17 @@ class _ReversePromptPanelState extends ConsumerState<ReversePromptPanel> {
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
+            if (status != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                context.l10n.reversePrompt_dualExecutionProvider(
+                  status.preferredProvider.displayName,
+                ),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ],
           ],
         );
       },

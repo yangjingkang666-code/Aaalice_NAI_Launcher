@@ -6489,6 +6489,11 @@ class AppLocalizationsJa extends AppLocalizations {
       '2 つのモデルを順番に実行してローカル候補を提供します。最終統合はクラウド画像モデルが行います。';
 
   @override
+  String reversePrompt_dualExecutionProvider(Object provider) {
+    return '現在のデバイス戦略: $provider';
+  }
+
+  @override
   String get reversePrompt_stageDualLocalTagger => 'ローカルデュアルタグを実行中';
 
   @override
@@ -9816,6 +9821,63 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settings_localOnnxTaggerFolder => 'ローカル ONNX タガー モデル';
+
+  @override
+  String get settings_localTaggerManagementTitle => 'ローカル逆プロンプトモデル';
+
+  @override
+  String get settings_localTaggerManagementSubtitle =>
+      'JoyTag/WD EVA02 モデルとラベルを検証し、実行デバイスを選択します';
+
+  @override
+  String get settings_localTaggerDevicePreference => '実行デバイス';
+
+  @override
+  String get settings_localTaggerDeviceAutomatic => '自動（DirectML 優先）';
+
+  @override
+  String get settings_localTaggerDeviceDirectMl => 'DirectML 優先';
+
+  @override
+  String get settings_localTaggerDeviceCpu => 'CPU のみ';
+
+  @override
+  String get settings_localTaggerDirectMlFallback =>
+      'Windows では DirectML を優先し、セッション作成または推論に失敗した場合は CPU に自動でフォールバックします。';
+
+  @override
+  String get settings_localTaggerCpuPinned => 'CPU のみの実行に固定されています。';
+
+  @override
+  String get settings_localTaggerCpuOnly =>
+      'このプラットフォームでは DirectML を利用できないため、CPU を使用します。';
+
+  @override
+  String get settings_localTaggerRefresh => 'モデル状態を更新';
+
+  @override
+  String get settings_localTaggerReady => '使用可能';
+
+  @override
+  String settings_localTaggerLabelCount(int count) {
+    return '$count 個のラベル';
+  }
+
+  @override
+  String get settings_localTaggerMissingModel => 'モデルファイルを利用できません';
+
+  @override
+  String get settings_localTaggerMissingLabels => 'ラベルファイルがありません';
+
+  @override
+  String get settings_localTaggerInvalidLabels => 'ラベルファイルが空または無効です';
+
+  @override
+  String get settings_localTaggerUnknown => '認識できないモデル役割';
+
+  @override
+  String get settings_localTaggerNoModels =>
+      'ONNX モデルが見つかりません。先にモデルファイルをインポートしてください。';
 
   @override
   String get settings_notConfigured => '未構成';

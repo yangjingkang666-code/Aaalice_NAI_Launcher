@@ -16,11 +16,19 @@ import 'package:path/path.dart' as p;
 import 'package:onnxruntime_v2/src/bindings/onnxruntime_bindings_generated.dart'
     as bg;
 
+import '../../core/constants/storage_keys.dart';
+import '../../core/storage/local_storage_service.dart';
 import '../../core/utils/isolate_pool.dart';
 import 'local_onnx_model_service.dart';
+import 'local_tagger_execution_strategy.dart';
 
 final localOnnxTaggerServiceProvider = Provider<LocalOnnxTaggerService>((ref) {
-  return const LocalOnnxTaggerService();
+  final storage = ref.read(localStorageServiceProvider);
+  return LocalOnnxTaggerService(
+    executionPreference: LocalTaggerExecutionPreference.fromStorage(
+      storage.getSetting<Object>(StorageKeys.onnxTaggerExecutionPreference),
+    ),
+  );
 });
 
 enum OnnxTaggerLabelCategory { rating, general, character, other }
@@ -70,10 +78,15 @@ class OnnxTaggerTag {
 }
 
 class OnnxTaggerResult {
-  const OnnxTaggerResult({required this.model, required this.tags});
+  const OnnxTaggerResult({
+    required this.model,
+    required this.tags,
+    this.executionProvider = LocalTaggerExecutionProvider.cpu,
+  });
 
   final LocalOnnxModelDescriptor model;
   final List<OnnxTaggerTag> tags;
+  final LocalTaggerExecutionProvider executionProvider;
 
   String get prompt => tags.map((tag) => tag.name).join(', ');
 }
@@ -83,6 +96,16 @@ class _OnnxImageInput {
 
   final Float32List data;
   final List<int> shape;
+}
+
+class _OnnxSessionHandle {
+  const _OnnxSessionHandle({
+    required this.session,
+    required this.executionProvider,
+  });
+
+  final OrtSession session;
+  final LocalTaggerExecutionProvider executionProvider;
 }
 
 enum OnnxSessionLoadMode { externalDataFile, patchedSingleFile }
@@ -108,7 +131,11 @@ class OnnxLetterboxLayout {
 }
 
 class LocalOnnxTaggerService {
-  const LocalOnnxTaggerService();
+  const LocalOnnxTaggerService({
+    this.executionPreference = LocalTaggerExecutionPreference.automatic,
+  });
+
+  final LocalTaggerExecutionPreference executionPreference;
 
   static const int defaultInputSize = 448;
   static const int _opsetPatchTailBytes = 4096;
@@ -141,18 +168,61 @@ class LocalOnnxTaggerService {
   }) {
     final imageData = TransferableTypedData.fromList([imageBytes]);
     return ComputeGate.singleTask().runIsolate(
-      () => const LocalOnnxTaggerService()._tagImageInCurrentIsolate(
-        imageData: imageData,
-        model: model,
-        generalThreshold: threshold ?? generalThreshold,
-        characterThreshold: threshold ?? characterThreshold,
-        includeRatings: includeRatings,
-      ),
+      () => LocalOnnxTaggerService(executionPreference: executionPreference)
+          ._tagImageInCurrentIsolate(
+            imageData: imageData,
+            model: model,
+            generalThreshold: threshold ?? generalThreshold,
+            characterThreshold: threshold ?? characterThreshold,
+            includeRatings: includeRatings,
+          ),
     );
   }
 
   Future<OnnxTaggerResult> _tagImageInCurrentIsolate({
     required TransferableTypedData imageData,
+    required LocalOnnxModelDescriptor model,
+    double generalThreshold = 0.35,
+    double characterThreshold = 0.35,
+    bool includeRatings = false,
+  }) async {
+    final imageBytes = imageData.materialize().asUint8List();
+    try {
+      return await _tagImageOnce(
+        imageBytes: imageBytes,
+        model: model,
+        generalThreshold: generalThreshold,
+        characterThreshold: characterThreshold,
+        includeRatings: includeRatings,
+      );
+    } catch (error, stackTrace) {
+      // DirectML can create a session successfully and still reject an
+      // operator at Run time (for example after a driver update). Keep the
+      // automatic/direct-ML modes useful by rebuilding the session with the
+      // CPU provider before surfacing the error to the caller.
+      if (Platform.isWindows &&
+          executionPreference != LocalTaggerExecutionPreference.cpu) {
+        try {
+          return await const LocalOnnxTaggerService(
+            executionPreference: LocalTaggerExecutionPreference.cpu,
+          )._tagImageOnce(
+            imageBytes: imageBytes,
+            model: model,
+            generalThreshold: generalThreshold,
+            characterThreshold: characterThreshold,
+            includeRatings: includeRatings,
+          );
+        } catch (_) {
+          // Preserve the original provider error and stack when CPU recovery
+          // is not possible either.
+        }
+      }
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+  }
+
+  Future<OnnxTaggerResult> _tagImageOnce({
+    required Uint8List imageBytes,
     required LocalOnnxModelDescriptor model,
     double generalThreshold = 0.35,
     double characterThreshold = 0.35,
@@ -169,7 +239,6 @@ class LocalOnnxTaggerService {
       throw StateError('标签文件为空: ${model.labelsPath}');
     }
 
-    final imageBytes = imageData.materialize().asUint8List();
     final decoded = img.decodeImage(imageBytes);
     if (decoded == null) {
       throw StateError('无法解码图片');
@@ -188,9 +257,12 @@ class LocalOnnxTaggerService {
     );
 
     OrtSession? session;
+    var executionProvider = LocalTaggerExecutionProvider.cpu;
     List<OrtValue?>? outputs;
     try {
-      session = await _createSession(model, options);
+      final sessionHandle = await _createSession(model, options);
+      session = sessionHandle.session;
+      executionProvider = sessionHandle.executionProvider;
       final inputName = _resolveInputName(session, model);
       final outputNames = _resolveOutputNames(session, model);
       final inputs = {inputName: inputOrt};
@@ -207,6 +279,7 @@ class LocalOnnxTaggerService {
           characterThreshold: characterThreshold,
           includeRatings: includeRatings,
         ),
+        executionProvider: executionProvider,
       );
     } finally {
       for (final output in outputs ?? const <OrtValue?>[]) {
@@ -236,7 +309,7 @@ class LocalOnnxTaggerService {
     return _parseTextLabels(raw);
   }
 
-  Future<OrtSession> _createSession(
+  Future<_OnnxSessionHandle> _createSession(
     LocalOnnxModelDescriptor model,
     OrtSessionOptions options,
   ) async {
@@ -249,18 +322,51 @@ class LocalOnnxTaggerService {
     return _createFileSession(patchedPath, options);
   }
 
-  OrtSession _createFileSession(String modelPath, OrtSessionOptions options) {
+  _OnnxSessionHandle _createFileSession(
+    String modelPath,
+    OrtSessionOptions options,
+  ) {
     if (Platform.isWindows) {
       return _createWindowsFileSession(modelPath);
     }
-    return OrtSession.fromFile(File(modelPath), options);
+    return _OnnxSessionHandle(
+      session: OrtSession.fromFile(File(modelPath), options),
+      executionProvider: LocalTaggerExecutionProvider.cpu,
+    );
   }
 
-  OrtSession _createWindowsFileSession(String modelPath) {
+  _OnnxSessionHandle _createWindowsFileSession(String modelPath) {
+    if (executionPreference == LocalTaggerExecutionPreference.cpu) {
+      return _createWindowsSessionWithProvider(modelPath, useDirectMl: false);
+    }
+
+    try {
+      return _createWindowsSessionWithProvider(modelPath, useDirectMl: true);
+    } catch (_) {
+      // A DirectML provider can be present in the runtime but still fail to
+      // initialize for a particular driver/model. Retry with the default CPU
+      // provider so reverse prompting remains available.
+      return _createWindowsSessionWithProvider(modelPath, useDirectMl: false);
+    }
+  }
+
+  _OnnxSessionHandle _createWindowsSessionWithProvider(
+    String modelPath, {
+    required bool useDirectMl,
+  }) {
     final options = _createNativeSessionOptions();
     try {
       _configureNativeSessionOptions(options);
-      return _createWindowsSessionFromPath(modelPath, options);
+      if (useDirectMl) {
+        _appendDirectMlProvider(options);
+      }
+      final session = _createWindowsSessionFromPath(modelPath, options);
+      return _OnnxSessionHandle(
+        session: session,
+        executionProvider: useDirectMl
+            ? LocalTaggerExecutionProvider.directMl
+            : LocalTaggerExecutionProvider.cpu,
+      );
     } finally {
       _releaseNativeSessionOptions(options);
     }
@@ -302,6 +408,32 @@ class LocalOnnxTaggerService {
           bg.OrtStatusPtr Function(ffi.Pointer<bg.OrtSessionOptions>, int)
         >()(options, GraphOptimizationLevel.ortEnableAll.value);
     OrtStatus.checkOrtStatus(statusPtr);
+  }
+
+  void _appendDirectMlProvider(ffi.Pointer<bg.OrtSessionOptions> options) {
+    final providerName = 'DML'.toNativeUtf8().cast<ffi.Char>();
+    try {
+      final statusPtr =
+          OrtEnv.instance.ortApiPtr.ref.SessionOptionsAppendExecutionProvider
+              .asFunction<
+                bg.OrtStatusPtr Function(
+                  ffi.Pointer<bg.OrtSessionOptions>,
+                  ffi.Pointer<ffi.Char>,
+                  ffi.Pointer<ffi.Pointer<ffi.Char>>,
+                  ffi.Pointer<ffi.Pointer<ffi.Char>>,
+                  int,
+                )
+              >()(
+            options,
+            providerName,
+            ffi.nullptr.cast<ffi.Pointer<ffi.Char>>(),
+            ffi.nullptr.cast<ffi.Pointer<ffi.Char>>(),
+            0,
+          );
+      OrtStatus.checkOrtStatus(statusPtr);
+    } finally {
+      calloc.free(providerName);
+    }
   }
 
   OrtSession _createWindowsSessionFromPath(

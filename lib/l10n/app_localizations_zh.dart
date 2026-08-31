@@ -6382,6 +6382,11 @@ class AppLocalizationsZh extends AppLocalizations {
       '两个模型按顺序运行，只提供本地候选标签证据；后续仍由云端读图模型整合。';
 
   @override
+  String reversePrompt_dualExecutionProvider(Object provider) {
+    return '当前设备策略：$provider';
+  }
+
+  @override
   String get reversePrompt_stageDualLocalTagger => '本地双标签运行中';
 
   @override
@@ -9654,6 +9659,61 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settings_localOnnxTaggerFolder => '本地 ONNX tagger 模型';
+
+  @override
+  String get settings_localTaggerManagementTitle => '本地反推模型管理';
+
+  @override
+  String get settings_localTaggerManagementSubtitle =>
+      '校验 JoyTag/WD EVA02 模型与标签文件，并选择运行设备策略';
+
+  @override
+  String get settings_localTaggerDevicePreference => '运行设备';
+
+  @override
+  String get settings_localTaggerDeviceAutomatic => '自动（DirectML 优先）';
+
+  @override
+  String get settings_localTaggerDeviceDirectMl => 'DirectML 优先';
+
+  @override
+  String get settings_localTaggerDeviceCpu => '仅使用 CPU';
+
+  @override
+  String get settings_localTaggerDirectMlFallback =>
+      'Windows 会优先尝试 DirectML；会话创建或推理失败时自动回退 CPU。';
+
+  @override
+  String get settings_localTaggerCpuPinned => '已固定使用 CPU。';
+
+  @override
+  String get settings_localTaggerCpuOnly => '当前平台不支持 DirectML，使用 CPU。';
+
+  @override
+  String get settings_localTaggerRefresh => '刷新模型状态';
+
+  @override
+  String get settings_localTaggerReady => '可用';
+
+  @override
+  String settings_localTaggerLabelCount(int count) {
+    return '$count 个标签';
+  }
+
+  @override
+  String get settings_localTaggerMissingModel => '模型文件不可用';
+
+  @override
+  String get settings_localTaggerMissingLabels => '缺少标签文件';
+
+  @override
+  String get settings_localTaggerInvalidLabels => '标签文件为空或无法解析';
+
+  @override
+  String get settings_localTaggerUnknown => '未识别的模型角色';
+
+  @override
+  String get settings_localTaggerNoModels => '尚未发现 ONNX 模型。请先导入模型文件。';
 
   @override
   String get settings_notConfigured => '未配置';
@@ -14867,6 +14927,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get prompt_appliedToMainPrompt => '已應用到主提示詞';
 
   @override
+  String get prompt_semanticOrganize => '使用 AI 整理 Prompt';
+
+  @override
+  String get prompt_semanticOrganizeSubtitle => '翻譯並分類未知短語，不改寫原始英文';
+
+  @override
+  String get prompt_semanticNoPrompt => '請先輸入主提示詞';
+
+  @override
+  String get prompt_semanticNoUnknown => '沒有需要 AI 整理的未知短語';
+
+  @override
+  String get prompt_semanticAiFailed => 'AI 整理失敗';
+
+  @override
   String get prompt_inputPrompt => '描述你想生成的畫面';
 
   @override
@@ -19806,6 +19881,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       '兩個模型按順序執行，只提供本地候選標籤證據；後續仍由雲端讀圖模型整合。';
 
   @override
+  String reversePrompt_dualExecutionProvider(Object provider) {
+    return '目前裝置策略：$provider';
+  }
+
+  @override
   String get reversePrompt_stageDualLocalTagger => '本地雙標籤執行中';
 
   @override
@@ -23078,6 +23158,61 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get settings_localOnnxTaggerFolder => '本地 ONNX tagger 模型';
+
+  @override
+  String get settings_localTaggerManagementTitle => '本地反推模型管理';
+
+  @override
+  String get settings_localTaggerManagementSubtitle =>
+      '檢查 JoyTag/WD EVA02 模型與標籤檔案，並選擇執行裝置策略';
+
+  @override
+  String get settings_localTaggerDevicePreference => '執行裝置';
+
+  @override
+  String get settings_localTaggerDeviceAutomatic => '自動（DirectML 優先）';
+
+  @override
+  String get settings_localTaggerDeviceDirectMl => 'DirectML 優先';
+
+  @override
+  String get settings_localTaggerDeviceCpu => '僅使用 CPU';
+
+  @override
+  String get settings_localTaggerDirectMlFallback =>
+      'Windows 會優先嘗試 DirectML；建立工作階段或推論失敗時自動退回 CPU。';
+
+  @override
+  String get settings_localTaggerCpuPinned => '已固定使用 CPU。';
+
+  @override
+  String get settings_localTaggerCpuOnly => '目前平台不支援 DirectML，使用 CPU。';
+
+  @override
+  String get settings_localTaggerRefresh => '重新整理模型狀態';
+
+  @override
+  String get settings_localTaggerReady => '可用';
+
+  @override
+  String settings_localTaggerLabelCount(int count) {
+    return '$count 個標籤';
+  }
+
+  @override
+  String get settings_localTaggerMissingModel => '模型檔案無法使用';
+
+  @override
+  String get settings_localTaggerMissingLabels => '缺少標籤檔案';
+
+  @override
+  String get settings_localTaggerInvalidLabels => '標籤檔案為空或無法解析';
+
+  @override
+  String get settings_localTaggerUnknown => '未識別的模型角色';
+
+  @override
+  String get settings_localTaggerNoModels => '尚未找到 ONNX 模型，請先匯入模型檔案。';
 
   @override
   String get settings_notConfigured => '未配置';
@@ -26755,6 +26890,79 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String promptPatch_aiFailed(String error) {
     return 'AI 提案失敗：$error';
   }
+
+  @override
+  String get promptPatch_seedStrategy => '修改 Seed 策略';
+
+  @override
+  String get promptPatch_seedBase => '重用來源圖 Seed';
+
+  @override
+  String get promptPatch_seedRandom => '隨機 Seed（加入佇列時生成一次）';
+
+  @override
+  String get promptPatch_seedSpecified => '使用指定 Seed';
+
+  @override
+  String get promptPatch_seedValue => 'Seed 值（0–4294967295）';
+
+  @override
+  String get promptPatch_seedSummaryBase => '將重用來源圖 Seed';
+
+  @override
+  String get promptPatch_seedSummaryRandom => '加入佇列時生成一次 Seed，重試時沿用';
+
+  @override
+  String promptPatch_seedSummarySpecified(int seed) {
+    return '將使用指定 Seed：$seed';
+  }
+
+  @override
+  String get promptBatch_title => 'AI 批次規劃器';
+
+  @override
+  String get promptBatch_reviewHint =>
+      'AI 僅提出可審核的姿勢/場景變體。確認後任務才會進入序列佇列；不會自動開始生成。';
+
+  @override
+  String get promptBatch_instruction => '任務要求';
+
+  @override
+  String get promptBatch_count => '數量';
+
+  @override
+  String get promptBatch_empty => '先輸入目標，再請助手提出計畫';
+
+  @override
+  String get promptBatch_propose => '提出計畫';
+
+  @override
+  String get promptBatch_addSelected => '加入已選任務';
+
+  @override
+  String get promptBatch_needInstruction => '請先輸入批次任務要求';
+
+  @override
+  String promptBatch_failed(String error) {
+    return '批次規劃失敗：$error';
+  }
+
+  @override
+  String get promptBatch_invalidSeed => '指定 Seed 必須是 0 到 4294967295 之間的整數';
+
+  @override
+  String promptBatch_queueCapacity(int count) {
+    return '佇列只剩 $count 個位置，請縮減計畫';
+  }
+
+  @override
+  String get promptBatch_partialAdd => '部分任務無法加入佇列';
+
+  @override
+  String get promptBatch_editItem => '編輯計畫項目';
+
+  @override
+  String get promptBatch_summary => '摘要';
 
   @override
   String get promptRecipe_load => '載入配方';

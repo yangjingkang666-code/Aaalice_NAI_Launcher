@@ -6645,6 +6645,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'The two models run sequentially and provide local candidate evidence; the cloud vision model still performs the final integration.';
 
   @override
+  String reversePrompt_dualExecutionProvider(Object provider) {
+    return 'Current device strategy: $provider';
+  }
+
+  @override
   String get reversePrompt_stageDualLocalTagger => 'Running local dual taggers';
 
   @override
@@ -10041,6 +10046,66 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settings_localOnnxTaggerFolder => 'Local ONNX tagger model';
+
+  @override
+  String get settings_localTaggerManagementTitle =>
+      'Local reverse-prompt models';
+
+  @override
+  String get settings_localTaggerManagementSubtitle =>
+      'Validate JoyTag/WD EVA02 models and labels, then choose the execution policy';
+
+  @override
+  String get settings_localTaggerDevicePreference => 'Execution device';
+
+  @override
+  String get settings_localTaggerDeviceAutomatic =>
+      'Automatic (DirectML first)';
+
+  @override
+  String get settings_localTaggerDeviceDirectMl => 'DirectML first';
+
+  @override
+  String get settings_localTaggerDeviceCpu => 'CPU only';
+
+  @override
+  String get settings_localTaggerDirectMlFallback =>
+      'Windows tries DirectML first and falls back to CPU if session creation or inference fails.';
+
+  @override
+  String get settings_localTaggerCpuPinned => 'CPU-only execution is pinned.';
+
+  @override
+  String get settings_localTaggerCpuOnly =>
+      'DirectML is not supported on this platform; CPU is used.';
+
+  @override
+  String get settings_localTaggerRefresh => 'Refresh model status';
+
+  @override
+  String get settings_localTaggerReady => 'Ready';
+
+  @override
+  String settings_localTaggerLabelCount(int count) {
+    return '$count labels';
+  }
+
+  @override
+  String get settings_localTaggerMissingModel => 'Model file unavailable';
+
+  @override
+  String get settings_localTaggerMissingLabels => 'Label file missing';
+
+  @override
+  String get settings_localTaggerInvalidLabels =>
+      'Label file is empty or invalid';
+
+  @override
+  String get settings_localTaggerUnknown => 'Unrecognized model role';
+
+  @override
+  String get settings_localTaggerNoModels =>
+      'No ONNX models found. Import model files first.';
 
   @override
   String get settings_notConfigured => 'Not configured';

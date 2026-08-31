@@ -11,7 +11,11 @@ import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/hive_storage_helper.dart';
 import '../../../../core/utils/localization_extension.dart';
 import '../../../../core/utils/vibe_library_path_helper.dart';
+import '../../../../data/services/dual_local_onnx_tagger_service.dart';
 import '../../../../data/services/local_onnx_model_service.dart';
+import '../../../../data/services/local_onnx_tagger_service.dart';
+import '../../../../data/services/local_tagger_execution_strategy.dart';
+import '../../../../data/services/local_tagger_manager_service.dart';
 import '../../../providers/image_save_settings_provider.dart';
 import '../../../widgets/common/app_toast.dart';
 import '../widgets/cache_statistics_tile.dart';
@@ -31,6 +35,8 @@ class StorageSettingsSection extends ConsumerStatefulWidget {
 
 class _StorageSettingsSectionState
     extends ConsumerState<StorageSettingsSection> {
+  Future<LocalTaggerEnvironmentStatus>? _localTaggerInspectionFuture;
+
   Future<void> _selectSaveDirectory(BuildContext context) async {
     try {
       final result = await FilePicker.platform.getDirectoryPath(
@@ -67,6 +73,7 @@ class _StorageSettingsSectionState
       final service = ref.read(localOnnxModelServiceProvider);
       await service.setTaggerDirectory(result);
       if (mounted) {
+        _localTaggerInspectionFuture = null;
         setState(() {});
         AppToast.success(
           context,
@@ -102,6 +109,7 @@ class _StorageSettingsSectionState
           .read(localOnnxModelServiceProvider)
           .importTaggerFiles(sources);
       if (mounted) {
+        _localTaggerInspectionFuture = null;
         setState(() {});
         AppToast.success(
           context,
@@ -139,7 +147,10 @@ class _StorageSettingsSectionState
     );
     if (confirmed != true) return;
     await ref.read(localOnnxModelServiceProvider).clearManagedTaggerFiles();
-    if (mounted) setState(() {});
+    if (mounted) {
+      _localTaggerInspectionFuture = null;
+      setState(() {});
+    }
   }
 
   Future<void> _openLocalOnnxTaggerDirectory(String path) async {
@@ -158,10 +169,171 @@ class _StorageSettingsSectionState
     }
   }
 
+  String _localTaggerStatusLabel(
+    BuildContext context,
+    LocalTaggerModelStatus status,
+  ) {
+    if (!status.isKnownRole) {
+      return context.l10n.settings_localTaggerUnknown;
+    }
+    if (!status.modelAvailable) {
+      return context.l10n.settings_localTaggerMissingModel;
+    }
+    return switch (status.issue) {
+      'missing_labels' => context.l10n.settings_localTaggerMissingLabels,
+      'invalid_labels' => context.l10n.settings_localTaggerInvalidLabels,
+      _ when status.isReady => context.l10n.settings_localTaggerReady,
+      _ => context.l10n.settings_localTaggerUnknown,
+    };
+  }
+
+  String _localTaggerRoleLabel(
+    BuildContext context,
+    LocalTaggerModelStatus status,
+  ) {
+    return switch (status.role) {
+      DualLocalTaggerRole.joyTag => 'JoyTag',
+      DualLocalTaggerRole.wdEva02 => 'WD EVA02',
+      null => context.l10n.settings_localTaggerUnknown,
+    };
+  }
+
+  String _localTaggerExecutionExplanation(
+    BuildContext context,
+    LocalTaggerEnvironmentStatus status,
+  ) {
+    if (!status.executionStrategy.isWindows) {
+      return context.l10n.settings_localTaggerCpuOnly;
+    }
+    if (status.preference == LocalTaggerExecutionPreference.cpu) {
+      return context.l10n.settings_localTaggerCpuPinned;
+    }
+    return context.l10n.settings_localTaggerDirectMlFallback;
+  }
+
+  Widget _buildLocalTaggerManagement(
+    BuildContext context,
+    LocalTaggerManagerService manager,
+  ) {
+    return FutureBuilder<LocalTaggerEnvironmentStatus>(
+      future: _localTaggerInspectionFuture ??= manager.inspect(),
+      builder: (context, snapshot) {
+        final status = snapshot.data;
+        final models = status?.models ?? const <LocalTaggerModelStatus>[];
+        return ExpansionTile(
+          leading: const Icon(Icons.memory_outlined),
+          title: Text(context.l10n.settings_localTaggerManagementTitle),
+          subtitle: Text(
+            status == null
+                ? context.l10n.settings_localTaggerManagementSubtitle
+                : _localTaggerExecutionExplanation(context, status),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          children: [
+            if (status != null) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    context.l10n.settings_localTaggerManagementSubtitle,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ),
+              ListTile(
+                dense: true,
+                leading: const Icon(Icons.speed_outlined),
+                title: Text(context.l10n.settings_localTaggerDevicePreference),
+                trailing: DropdownButton<LocalTaggerExecutionPreference>(
+                  value: status.preference,
+                  items: [
+                    DropdownMenuItem(
+                      value: LocalTaggerExecutionPreference.automatic,
+                      child: Text(
+                        context.l10n.settings_localTaggerDeviceAutomatic,
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: LocalTaggerExecutionPreference.directMl,
+                      child: Text(
+                        context.l10n.settings_localTaggerDeviceDirectMl,
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: LocalTaggerExecutionPreference.cpu,
+                      child: Text(context.l10n.settings_localTaggerDeviceCpu),
+                    ),
+                  ],
+                  onChanged: (value) async {
+                    if (value == null) return;
+                    await manager.setExecutionPreference(value);
+                    ref.invalidate(localOnnxTaggerServiceProvider);
+                    ref.invalidate(dualLocalOnnxTaggerServiceProvider);
+                    if (mounted) {
+                      _localTaggerInspectionFuture = null;
+                      setState(() {});
+                    }
+                  },
+                ),
+              ),
+              for (final model in models)
+                ListTile(
+                  dense: true,
+                  leading: Icon(
+                    model.isReady
+                        ? Icons.check_circle_outline
+                        : Icons.warning_amber_outlined,
+                    color: model.isReady
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.error,
+                  ),
+                  title: Text(
+                    '${_localTaggerRoleLabel(context, model)} · ${model.model.name}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(
+                    '${_localTaggerStatusLabel(context, model)}${model.labelCount > 0 ? ' · ${context.l10n.settings_localTaggerLabelCount(model.labelCount)}' : ''}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              if (models.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      context.l10n.settings_localTaggerNoModels,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () {
+                    _localTaggerInspectionFuture = null;
+                    setState(() {});
+                  },
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: Text(context.l10n.settings_localTaggerRefresh),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final saveSettings = ref.watch(imageSaveSettingsNotifierProvider);
     final localOnnxService = ref.watch(localOnnxModelServiceProvider);
+    final localTaggerManager = ref.watch(localTaggerManagerServiceProvider);
     final localOnnxDirectory = localOnnxService.taggerDirectory;
 
     return SettingsPageLayout(
@@ -326,6 +498,7 @@ class _StorageSettingsSectionState
                 ),
                 onTap: _configureLocalOnnxTagger,
               ),
+              _buildLocalTaggerManagement(context, localTaggerManager),
               // Vibe库保存路径设置
               const VibeLibraryPathTile(),
               // Hive 数据存储路径设置

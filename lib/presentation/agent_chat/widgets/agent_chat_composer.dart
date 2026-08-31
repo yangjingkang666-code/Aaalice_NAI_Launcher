@@ -841,8 +841,8 @@ class _AgentChatComposerState extends State<AgentChatComposer> {
     final enabled = viewData.agentSettings.settings.chat.webAccessEnabled;
     final interactive = state.initialized && _agentSettingsInteractive;
     final tooltip = enabled
-        ? l10n.agentChat_disableWebAccess
-        : l10n.agentChat_enableWebAccess;
+        ? '${l10n.agentChat_webAccess}: ${l10n.agentChat_disableWebAccess}'
+        : '${l10n.agentChat_webAccess}: ${l10n.agentChat_enableWebAccess}';
     final iconColor = enabled
         ? theme.colorScheme.primary.withValues(alpha: 0.82)
         : theme.colorScheme.onSurface.withValues(alpha: 0.55);

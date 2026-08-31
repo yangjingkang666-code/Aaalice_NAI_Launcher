@@ -312,13 +312,15 @@ class LocalOnnxModelService {
     }
   }
 
-  Future<List<LocalOnnxModelDescriptor>> scanTaggerModels() async {
+  Future<List<LocalOnnxModelDescriptor>> scanTaggerModels({
+    String? directoryPath,
+  }) async {
     final managedDirectory = Directory(await getManagedTaggerDirectory());
     if (await managedDirectory.exists()) {
       await _recoverInterruptedImports(managedDirectory);
     }
     return _scanModels(
-      taggerDirectory,
+      directoryPath ?? taggerDirectory,
       allowedKinds: const {
         LocalOnnxModelKind.wd14Tagger,
         LocalOnnxModelKind.clTagger,

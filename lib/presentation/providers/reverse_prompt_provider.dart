@@ -9,6 +9,7 @@ import '../../data/models/character/character_prompt.dart';
 import '../../data/services/dual_local_onnx_tagger_service.dart';
 import '../../data/services/local_onnx_model_service.dart';
 import '../../data/services/local_onnx_tagger_service.dart';
+import '../../data/services/local_tagger_execution_strategy.dart';
 import '../prompt_assistant/models/prompt_assistant_models.dart';
 import '../prompt_assistant/models/reverse_prompt_models.dart';
 import '../prompt_assistant/services/prompt_assistant_api_client.dart';
@@ -732,7 +733,7 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
     );
     _completeStage(
       ReversePromptProcessingStage.onnxTagger,
-      routeLabel: model.name,
+      routeLabel: '${model.name} · ${result.executionProvider.displayName}',
       output: prompt,
       durationMs: DateTime.now().difference(startedAt).inMilliseconds,
     );

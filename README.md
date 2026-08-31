@@ -194,6 +194,7 @@ NAI Launcher 面向长期使用 NovelAI 的创作者：生成图片、反复调�
 
 - **本地图库**：在设置中选择作品目录，再进入图库开始扫描；图库按需处理，不会因为只启动应用就扫描全部文件。
 - **标签补全**：基础标签库随应用提供，可离线使用。相关标签推荐、中文标签词库和 AI 翻译属于可选数据源，在“设置 → 数据源与缓存”中管理。
+- **本地图片反推**：在“设置 → 数据与存储 → 本地反推模型管理”导入 JoyTag/WD EVA02 的 ONNX 与标签文件。Windows 默认优先尝试 DirectML，运行库或驱动不满足时自动回退 CPU；模型不会随应用静默下载。
 - **Krita**：先在 Launcher 设置中启用 Krita Bridge，再按 [`krita_plugin/README.md`](krita_plugin/README.md) 安装插件。
 - **ComfyUI**：在“设置 → 集成”中配置本地 ComfyUI 地址和工作流；具体模型与节点仍由 ComfyUI 环境负责。
 

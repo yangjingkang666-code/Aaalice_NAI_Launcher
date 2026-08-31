@@ -16,7 +16,7 @@ class KritaBridgeSettingsSection extends ConsumerWidget {
     final l10n = context.l10n;
 
     return SettingsCard(
-      title: l10n.settings_integrationConnectionSection,
+      title: l10n.settings_kritaBridgeTitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

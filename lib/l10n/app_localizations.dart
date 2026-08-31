@@ -11825,6 +11825,12 @@ abstract class AppLocalizations {
   /// **'The two models run sequentially and provide local candidate evidence; the cloud vision model still performs the final integration.'**
   String get reversePrompt_dualLocalTaggerDescription;
 
+  /// No description provided for @reversePrompt_dualExecutionProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Current device strategy: {provider}'**
+  String reversePrompt_dualExecutionProvider(Object provider);
+
   /// No description provided for @reversePrompt_stageDualLocalTagger.
   ///
   /// In en, this message translates to:
@@ -17667,6 +17673,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Local ONNX tagger model'**
   String get settings_localOnnxTaggerFolder;
+
+  /// No description provided for @settings_localTaggerManagementTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Local reverse-prompt models'**
+  String get settings_localTaggerManagementTitle;
+
+  /// No description provided for @settings_localTaggerManagementSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Validate JoyTag/WD EVA02 models and labels, then choose the execution policy'**
+  String get settings_localTaggerManagementSubtitle;
+
+  /// No description provided for @settings_localTaggerDevicePreference.
+  ///
+  /// In en, this message translates to:
+  /// **'Execution device'**
+  String get settings_localTaggerDevicePreference;
+
+  /// No description provided for @settings_localTaggerDeviceAutomatic.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic (DirectML first)'**
+  String get settings_localTaggerDeviceAutomatic;
+
+  /// No description provided for @settings_localTaggerDeviceDirectMl.
+  ///
+  /// In en, this message translates to:
+  /// **'DirectML first'**
+  String get settings_localTaggerDeviceDirectMl;
+
+  /// No description provided for @settings_localTaggerDeviceCpu.
+  ///
+  /// In en, this message translates to:
+  /// **'CPU only'**
+  String get settings_localTaggerDeviceCpu;
+
+  /// No description provided for @settings_localTaggerDirectMlFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Windows tries DirectML first and falls back to CPU if session creation or inference fails.'**
+  String get settings_localTaggerDirectMlFallback;
+
+  /// No description provided for @settings_localTaggerCpuPinned.
+  ///
+  /// In en, this message translates to:
+  /// **'CPU-only execution is pinned.'**
+  String get settings_localTaggerCpuPinned;
+
+  /// No description provided for @settings_localTaggerCpuOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'DirectML is not supported on this platform; CPU is used.'**
+  String get settings_localTaggerCpuOnly;
+
+  /// No description provided for @settings_localTaggerRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh model status'**
+  String get settings_localTaggerRefresh;
+
+  /// No description provided for @settings_localTaggerReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get settings_localTaggerReady;
+
+  /// No description provided for @settings_localTaggerLabelCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} labels'**
+  String settings_localTaggerLabelCount(int count);
+
+  /// No description provided for @settings_localTaggerMissingModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model file unavailable'**
+  String get settings_localTaggerMissingModel;
+
+  /// No description provided for @settings_localTaggerMissingLabels.
+  ///
+  /// In en, this message translates to:
+  /// **'Label file missing'**
+  String get settings_localTaggerMissingLabels;
+
+  /// No description provided for @settings_localTaggerInvalidLabels.
+  ///
+  /// In en, this message translates to:
+  /// **'Label file is empty or invalid'**
+  String get settings_localTaggerInvalidLabels;
+
+  /// No description provided for @settings_localTaggerUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unrecognized model role'**
+  String get settings_localTaggerUnknown;
+
+  /// No description provided for @settings_localTaggerNoModels.
+  ///
+  /// In en, this message translates to:
+  /// **'No ONNX models found. Import model files first.'**
+  String get settings_localTaggerNoModels;
 
   /// No description provided for @settings_notConfigured.
   ///

@@ -535,6 +535,11 @@
     }
   },
   "prompt_appliedToMainPrompt": "已應用到主提示詞",
+  "prompt_semanticOrganize": "使用 AI 整理 Prompt",
+  "prompt_semanticOrganizeSubtitle": "翻譯並分類未知短語，不改寫原始英文",
+  "prompt_semanticNoPrompt": "請先輸入主提示詞",
+  "prompt_semanticNoUnknown": "沒有需要 AI 整理的未知短語",
+  "prompt_semanticAiFailed": "AI 整理失敗",
   "prompt_inputPrompt": "描述你想生成的畫面",
   "prompt_describeImage": "描述你想要生成的影象...",
   "prompt_describeImageWithHint": "輸入提示詞描述畫面，輸入 < 引用詞庫，支援自動補全標籤",
@@ -3065,6 +3070,8 @@
   "reversePrompt_dualWdEva02": "WD EVA02 模型",
   "reversePrompt_dualLocalTaggerHint": "請在設定中匯入並配置對應 ONNX 模型",
   "reversePrompt_dualLocalTaggerDescription": "兩個模型按順序執行，只提供本地候選標籤證據；後續仍由雲端讀圖模型整合。",
+  "reversePrompt_dualExecutionProvider": "目前裝置策略：{provider}",
+  "@reversePrompt_dualExecutionProvider": {"placeholders": {"provider": {}}},
   "reversePrompt_stageDualLocalTagger": "本地雙標籤執行中",
   "reversePrompt_noDualTaggerModels": "未找到 JoyTag 與 WD EVA02 兩個 ONNX 模型",
   "reversePrompt_dualTaggerFailed": "本地雙標籤均執行失敗",
@@ -4686,6 +4693,24 @@
   "settings_selectLocalOnnxTaggerFolder": "選擇 ONNX tagger 模型資料夾",
   "settings_localOnnxTaggerFolderSaved": "ONNX tagger 模型資料夾已儲存",
   "settings_localOnnxTaggerFolder": "本地 ONNX tagger 模型",
+  "settings_localTaggerManagementTitle": "本地反推模型管理",
+  "settings_localTaggerManagementSubtitle": "檢查 JoyTag/WD EVA02 模型與標籤檔案，並選擇執行裝置策略",
+  "settings_localTaggerDevicePreference": "執行裝置",
+  "settings_localTaggerDeviceAutomatic": "自動（DirectML 優先）",
+  "settings_localTaggerDeviceDirectMl": "DirectML 優先",
+  "settings_localTaggerDeviceCpu": "僅使用 CPU",
+  "settings_localTaggerDirectMlFallback": "Windows 會優先嘗試 DirectML；建立工作階段或推論失敗時自動退回 CPU。",
+  "settings_localTaggerCpuPinned": "已固定使用 CPU。",
+  "settings_localTaggerCpuOnly": "目前平台不支援 DirectML，使用 CPU。",
+  "settings_localTaggerRefresh": "重新整理模型狀態",
+  "settings_localTaggerReady": "可用",
+  "settings_localTaggerLabelCount": "{count} 個標籤",
+  "@settings_localTaggerLabelCount": {"placeholders": {"count": {"type": "int"}}},
+  "settings_localTaggerMissingModel": "模型檔案無法使用",
+  "settings_localTaggerMissingLabels": "缺少標籤檔案",
+  "settings_localTaggerInvalidLabels": "標籤檔案為空或無法解析",
+  "settings_localTaggerUnknown": "未識別的模型角色",
+  "settings_localTaggerNoModels": "尚未找到 ONNX 模型，請先匯入模型檔案。",
   "settings_notConfigured": "未配置",
   "settings_confirmExternalSendTitle": "保護模式：確認外部傳送",
   "settings_confirmExternalSendContent": "即將把 {count} 張本地圖片傳送到 {target}。圖片會離開本地應用邊界，請確認這符合你的預期。",
@@ -6909,5 +6934,48 @@
   "promptRecipe_attachmentReady": "已掛載",
   "promptRecipe_reattachDone": "帶素材套用",
   "promptRecipe_vibeFileInvalid": "所選檔案沒有恰好包含一個 Vibe 參考。",
-  "promptRecipe_notFound": "這個生成配方已無法使用"
+  "promptRecipe_notFound": "這個生成配方已無法使用",
+  "promptBatch_addSelected": "加入已選任務",
+  "promptBatch_count": "數量",
+  "promptBatch_editItem": "編輯計畫項目",
+  "promptBatch_empty": "先輸入目標，再請助手提出計畫",
+  "promptBatch_failed": "批次規劃失敗：{error}",
+  "@promptBatch_failed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "promptBatch_instruction": "任務要求",
+  "promptBatch_invalidSeed": "指定 Seed 必須是 0 到 4294967295 之間的整數",
+  "promptBatch_needInstruction": "請先輸入批次任務要求",
+  "promptBatch_partialAdd": "部分任務無法加入佇列",
+  "promptBatch_propose": "提出計畫",
+  "promptBatch_queueCapacity": "佇列只剩 {count} 個位置，請縮減計畫",
+  "@promptBatch_queueCapacity": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "promptBatch_reviewHint": "AI 僅提出可審核的姿勢/場景變體。確認後任務才會進入序列佇列；不會自動開始生成。",
+  "promptBatch_summary": "摘要",
+  "promptBatch_title": "AI 批次規劃器",
+  "promptPatch_seedBase": "重用來源圖 Seed",
+  "promptPatch_seedRandom": "隨機 Seed（加入佇列時生成一次）",
+  "promptPatch_seedSpecified": "使用指定 Seed",
+  "promptPatch_seedStrategy": "修改 Seed 策略",
+  "promptPatch_seedSummaryBase": "將重用來源圖 Seed",
+  "promptPatch_seedSummaryRandom": "加入佇列時生成一次 Seed，重試時沿用",
+  "promptPatch_seedSummarySpecified": "將使用指定 Seed：{seed}",
+  "@promptPatch_seedSummarySpecified": {
+    "placeholders": {
+      "seed": {
+        "type": "int"
+      }
+    }
+  },
+  "promptPatch_seedValue": "Seed 值（0–4294967295）"
 }
