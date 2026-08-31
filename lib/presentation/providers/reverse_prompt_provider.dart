@@ -155,6 +155,13 @@ class _ReversePromptUiError implements Exception {
   final String key;
 }
 
+/// Internal control-flow marker used when a newer run supersedes an older one.
+/// It is never surfaced as a provider error because [cancel] has already
+/// published the user-facing cancelled state.
+class _ReversePromptCancelled implements Exception {
+  const _ReversePromptCancelled();
+}
+
 class ReversePromptState {
   const ReversePromptState({
     this.images = const [],
@@ -358,6 +365,7 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
   }
 
   final Ref _ref;
+  int _runGeneration = 0;
 
   LocalStorageService get _storage => _ref.read(localStorageServiceProvider);
 
@@ -509,11 +517,15 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
   }
 
   Future<void> runChain() async {
+    if (state.isProcessing) {
+      return;
+    }
     if (!state.canRun) {
       state = state.copyWith(error: 'reversePrompt_needImageAndMethod');
       return;
     }
 
+    final runGeneration = ++_runGeneration;
     state = state.copyWith(
       isProcessing: true,
       processingStage: ReversePromptProcessingStage.preparing,
@@ -538,18 +550,28 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
         throw const _ReversePromptUiError('reversePrompt_needImageAndMethod');
       }
       if (state.useDualLocalTagger) {
-        final result = await _runDualLocalTaggerStage(image);
+        final result = await _runDualLocalTaggerStage(
+          image,
+          runGeneration: runGeneration,
+        );
+        _ensureRunActive(runGeneration);
         currentPrompt = result.prompt;
         localEvidence = result.evidence;
       } else if (state.useOnnxTagger) {
-        currentPrompt = await _runOnnxTaggerStage(image);
+        currentPrompt = await _runOnnxTaggerStage(
+          image,
+          runGeneration: runGeneration,
+        );
+        _ensureRunActive(runGeneration);
       }
 
       if (state.useLlmReverse) {
         final draft = await _runLlmReverseStage(
           image,
           taggerPrompt: currentPrompt,
+          runGeneration: runGeneration,
         );
+        _ensureRunActive(runGeneration);
         currentPrompt = draft.positivePrompt;
         if (state.useDualLocalTagger &&
             localEvidence.trim().isNotEmpty &&
@@ -557,7 +579,9 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
           final integrated = await _runIntegrationStage(
             localEvidence: localEvidence,
             visualDescription: currentPrompt,
+            runGeneration: runGeneration,
           );
+          _ensureRunActive(runGeneration);
           currentPrompt = integrated.positivePrompt;
         }
       }
@@ -577,15 +601,23 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
         currentPrompt = await _runCharacterReplaceStage(
           inputPrompt: currentPrompt,
           character: character,
+          runGeneration: runGeneration,
         );
+        _ensureRunActive(runGeneration);
       }
 
+      _ensureRunActive(runGeneration);
       state = state.copyWith(
         isProcessing: false,
         clearProcessingStage: true,
         finalPrompt: currentPrompt,
       );
+    } on _ReversePromptCancelled {
+      return;
     } catch (e) {
+      if (!_isRunActive(runGeneration)) {
+        return;
+      }
       final failedStage = state.processingStage;
       if (failedStage != null &&
           failedStage != ReversePromptProcessingStage.preparing) {
@@ -610,6 +642,45 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
     }
   }
 
+  /// Cancels the active cloud request and invalidates any in-flight local
+  /// stage. ONNX inference runs in an isolate and may finish in the
+  /// background, but its stale result cannot advance the chain afterwards.
+  Future<void> cancel() async {
+    if (!state.isProcessing) {
+      return;
+    }
+
+    ++_runGeneration;
+    final audits = state.stageAudits
+        .where((audit) => audit.status != ReversePromptStageStatus.running)
+        .toList(growable: false);
+    // Publish the cancelled state before awaiting provider cleanup. This
+    // closes the race where a late stage result resumes while cancellation
+    // requests are still being dispatched.
+    state = state.copyWith(
+      isProcessing: false,
+      clearProcessingStage: true,
+      stageAudits: audits,
+      error: 'reversePrompt_cancelled',
+    );
+
+    final assistant = _ref.read(promptAssistantServiceProvider);
+    await Future.wait<void>(
+      const [
+        'reverse_prompt_panel',
+        'reverse_prompt_integrate',
+        'reverse_prompt_character_replace',
+      ].map((sessionId) async {
+        try {
+          await assistant.cancelCurrentTask(sessionId: sessionId);
+        } catch (_) {
+          // Cancellation is best-effort. The generation guard above still
+          // prevents a late provider response from mutating the chain.
+        }
+      }),
+    );
+  }
+
   /// Re-runs one failed/intermediate stage without silently calling later
   /// stages. The reviewer can inspect the new evidence and explicitly run the
   /// full chain again if downstream output should be regenerated.
@@ -624,6 +695,7 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
       clearError: true,
       clearLastRawResponse: true,
     );
+    final runGeneration = ++_runGeneration;
     try {
       final image = state.selectedImage;
       if (image == null) {
@@ -631,11 +703,15 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
       }
       switch (stage) {
         case ReversePromptProcessingStage.onnxTagger:
-          await _runOnnxTaggerStage(image);
+          await _runOnnxTaggerStage(image, runGeneration: runGeneration);
         case ReversePromptProcessingStage.dualLocalTagger:
-          await _runDualLocalTaggerStage(image);
+          await _runDualLocalTaggerStage(image, runGeneration: runGeneration);
         case ReversePromptProcessingStage.llmReverse:
-          await _runLlmReverseStage(image, taggerPrompt: state.taggerPrompt);
+          await _runLlmReverseStage(
+            image,
+            taggerPrompt: state.taggerPrompt,
+            runGeneration: runGeneration,
+          );
         case ReversePromptProcessingStage.integration:
           final localEvidence = state.dualTaggerPrompt.trim();
           final visualDescription = state.llmPrompt.trim();
@@ -647,6 +723,7 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
           await _runIntegrationStage(
             localEvidence: localEvidence,
             visualDescription: visualDescription,
+            runGeneration: runGeneration,
           );
         case ReversePromptProcessingStage.characterReplace:
           final character = _resolveSelectedCharacter();
@@ -666,12 +743,19 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
           await _runCharacterReplaceStage(
             inputPrompt: input,
             character: character,
+            runGeneration: runGeneration,
           );
         case ReversePromptProcessingStage.preparing:
           break;
       }
+      _ensureRunActive(runGeneration);
       state = state.copyWith(isProcessing: false, clearProcessingStage: true);
+    } on _ReversePromptCancelled {
+      return;
     } catch (e) {
+      if (!_isRunActive(runGeneration)) {
+        return;
+      }
       final failedStage = state.processingStage;
       if (failedStage != null &&
           failedStage != ReversePromptProcessingStage.preparing) {
@@ -713,10 +797,14 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
     );
   }
 
-  Future<String> _runOnnxTaggerStage(ReversePromptImage image) async {
+  Future<String> _runOnnxTaggerStage(
+    ReversePromptImage image, {
+    required int runGeneration,
+  }) async {
     _beginStage(ReversePromptProcessingStage.onnxTagger);
     final startedAt = DateTime.now();
     final model = await _resolveSelectedTaggerModel();
+    _ensureRunActive(runGeneration);
     final result = await _ref
         .read(localOnnxTaggerServiceProvider)
         .tagImage(
@@ -725,6 +813,7 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
           generalThreshold: state.taggerGeneralThreshold,
           characterThreshold: state.taggerCharacterThreshold,
         );
+    _ensureRunActive(runGeneration);
     final prompt = result.prompt.trim();
     state = state.copyWith(
       taggerPrompt: prompt,
@@ -742,11 +831,13 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
   }
 
   Future<({String prompt, String evidence})> _runDualLocalTaggerStage(
-    ReversePromptImage image,
-  ) async {
+    ReversePromptImage image, {
+    required int runGeneration,
+  }) async {
     _beginStage(ReversePromptProcessingStage.dualLocalTagger);
     final startedAt = DateTime.now();
-    final models = await _resolveDualTaggerModels();
+    final models = await _resolveDualTaggerModels(runGeneration: runGeneration);
+    _ensureRunActive(runGeneration);
     final result = await _ref
         .read(dualLocalOnnxTaggerServiceProvider)
         .tagImage(
@@ -755,6 +846,7 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
           generalThreshold: state.taggerGeneralThreshold,
           characterThreshold: state.taggerCharacterThreshold,
         );
+    _ensureRunActive(runGeneration);
     final prompt = result.combinedPrompt.trim();
     final evidence = result.auditText.trim();
     state = state.copyWith(
@@ -778,6 +870,7 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
   Future<ReversePromptDraft> _runLlmReverseStage(
     ReversePromptImage image, {
     required String taggerPrompt,
+    required int runGeneration,
   }) async {
     _beginStage(ReversePromptProcessingStage.llmReverse);
     final startedAt = DateTime.now();
@@ -788,6 +881,7 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
           sessionId: 'reverse_prompt_panel',
           taggerPrompt: taggerPrompt,
         );
+    _ensureRunActive(runGeneration);
     state = state.copyWith(
       draft: draft,
       llmPrompt: draft.positivePrompt,
@@ -808,6 +902,7 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
   Future<ReversePromptDraft> _runIntegrationStage({
     required String localEvidence,
     required String visualDescription,
+    required int runGeneration,
   }) async {
     _beginStage(ReversePromptProcessingStage.integration);
     final startedAt = DateTime.now();
@@ -818,6 +913,7 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
           visualDescription: visualDescription,
           sessionId: 'reverse_prompt_integrate',
         );
+    _ensureRunActive(runGeneration);
     state = state.copyWith(
       draft: integrated,
       finalPrompt: integrated.positivePrompt,
@@ -837,6 +933,7 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
   Future<String> _runCharacterReplaceStage({
     required String inputPrompt,
     required CharacterPrompt character,
+    required int runGeneration,
   }) async {
     _beginStage(ReversePromptProcessingStage.characterReplace);
     final startedAt = DateTime.now();
@@ -844,6 +941,7 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
       inputPrompt: inputPrompt,
       character: character,
     );
+    _ensureRunActive(runGeneration);
     final updatedDraft = state.draft?.copyWith(positivePrompt: prompt);
     state = state.copyWith(
       draft: updatedDraft,
@@ -921,6 +1019,14 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
     return '${normalized.substring(0, 160)}...';
   }
 
+  bool _isRunActive(int runGeneration) => _runGeneration == runGeneration;
+
+  void _ensureRunActive(int runGeneration) {
+    if (!_isRunActive(runGeneration)) {
+      throw const _ReversePromptCancelled();
+    }
+  }
+
   Future<LocalOnnxModelDescriptor> _resolveSelectedTaggerModel() async {
     final models = await _ref
         .read(localOnnxModelServiceProvider)
@@ -939,10 +1045,13 @@ class ReversePromptNotifier extends StateNotifier<ReversePromptState> {
     return models.first;
   }
 
-  Future<DualLocalTaggerModelSelection> _resolveDualTaggerModels() async {
+  Future<DualLocalTaggerModelSelection> _resolveDualTaggerModels({
+    required int runGeneration,
+  }) async {
     final models = await _ref
         .read(localOnnxModelServiceProvider)
         .scanTaggerModels();
+    _ensureRunActive(runGeneration);
     final selection = DualLocalOnnxTaggerService.findPair(
       models,
       joyTagPath: state.selectedJoyTaggerModelPath,

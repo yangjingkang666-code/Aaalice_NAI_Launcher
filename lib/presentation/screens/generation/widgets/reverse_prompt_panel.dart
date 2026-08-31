@@ -610,22 +610,23 @@ class _ReversePromptPanelState extends ConsumerState<ReversePromptPanel> {
   }
 
   Widget _buildActions(ReversePromptState state) {
+    final notifier = ref.read(reversePromptProvider.notifier);
     return Row(
       children: [
         Expanded(
           child: FilledButton.icon(
-            onPressed: state.isProcessing || !state.canRun
+            onPressed: state.isProcessing
+                ? notifier.cancel
+                : !state.canRun
                 ? null
                 : () => _runChainWithProtection(state),
             icon: state.isProcessing
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                ? const Icon(Icons.stop_circle_outlined, size: 18)
                 : const Icon(Icons.play_arrow_rounded, size: 18),
             label: Text(
-              state.processingStage == null
+              state.isProcessing
+                  ? context.l10n.promptAssistant_cancelCurrentTask
+                  : state.processingStage == null
                   ? context.l10n.reversePrompt_start
                   : _localizedProcessingStage(state.processingStage!),
             ),
@@ -721,6 +722,8 @@ class _ReversePromptPanelState extends ConsumerState<ReversePromptPanel> {
 
   String _localizedError(String error) {
     return switch (error) {
+      'reversePrompt_cancelled' =>
+        context.l10n.promptAssistant_cancelCurrentTask,
       'reversePrompt_needImageAndMethod' =>
         context.l10n.reversePrompt_needImageAndMethod,
       'reversePrompt_needReplacementCharacter' =>
