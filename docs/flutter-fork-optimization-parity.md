@@ -20,12 +20,13 @@
 | 反推取消与过期结果防护 | 反推面板主操作按钮 | 处理中可立即取消；云端请求执行尽力取消，本地 ONNX/迟到响应按运行代次丢弃，不会覆盖取消后的状态或新一轮结果 |
 | 项目工作区 | 设置 → 数据与存储 → 项目目录 | 可选项目目录隔离图片、图片元数据 sidecar、Prompt Recipe 与项目知识库；旧图库/配方可在项目内非破坏导入，切换项目会清理缓存并触发按路径重建索引 |
 | Knowledge / Prompt RAG | Prompt 语义工作台 → 搜索 | 项目知识库优先，随后使用内置 Tag catalog/中文词典，最后才降级到 DanbooruSearch HF/ModelScope 端点；用户逐条确认后才写入草稿，并把所有检索证据保存到 Recipe |
+| DeepSeek Harness 本地桥接 | `plugins/deepseek-harness` + Aaalice `ENABLE_AGENT_CONTROL` | 可选的 loopback `aaalice-agent-control/v1` 服务提供状态、对话/生图转发、中止和离线画风实验室规划；桌面版 Harness profile 已安装编译包并支持标准发现文件自动发现，Aaalice 仍独占权限与 Anlas 审计 |
 
 ## 本轮明确延期
 
 - TIPO 发散 Provider：不接入当前 fork，避免增加一套不可审查的 Prompt 改写路由。
 - 自动评图与自主迭代：暂不自动调用评图或再次生成，保留现有人工确认流程。
-- 外部 Agent 控制：当前项目尚未开始该设计；后续会单独定义权限、沙箱、确认和审计协议后再实现。
+- 更完整的外部 Agent 控制：最小的本地 loopback v1 桥接已经实现，但跨主机调用、细粒度沙箱、能力授权界面、事件流、自动启动 Aaalice 和更强的 Agent 身份/审计设计仍延期；当前桥接不应被扩展成绕过 Aaalice 权限的第二套控制面。
 
 ## 运行规则
 
