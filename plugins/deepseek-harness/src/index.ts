@@ -9,7 +9,14 @@ import {
 } from './client.js'
 
 export const name = 'aaalice-agent-control'
-export const inject = ['tools']
+export const inject = ['tools', 'systemPrompt']
+
+const LAZY_ROUTING_PROMPT = `Aaalice image bridge (懒人模式):
+When the user asks to generate, draw, render, or edit an image — including 生图、绘图、文生图、图生图、提示词转换、AI 反推、反推提示词、随机画师串、画风实验室 — route the request to Aaalice instead of merely explaining how to do it.
+1. Call aaalice_agent_send with one concise natural-language instruction that preserves the user's subject, style, composition, model, size, seed, and other constraints. The Aaalice Agent owns prompt conversion, reverse interrogation, artist-chain style planning, NovelAI generation, queueing, and its in-app approval flow.
+2. If the user only asks for an offline random artist-chain/style-lab plan (no rendering), call aaalice_style_lab_plan instead; it is local and does not spend Anlas.
+3. Use aaalice_agent_status for status questions and aaalice_agent_abort only when the user asks to stop. If the bridge is unavailable or a call is denied, report that honestly and do not claim an image was generated.
+4. Do not ask the user to manually copy a prompt into Aaalice when the bridge is available. Generation charges and confirmation remain controlled by Aaalice; never bypass or invent approval.`
 
 const jsonObjectOutput = {
   type: 'object',
@@ -19,6 +26,14 @@ const jsonObjectOutput = {
 /** Register the optional Aaalice control tools without changing the Harness loop. */
 export function apply(ctx: Context): void {
   const client = new AaaliceAgentControlClient()
+
+  ctx.systemPrompt.section({
+    name: 'aaalice-agent-control:lazy-routing',
+    // Tool guidance occupies 100–199 in DSH. Keep this near the front so the
+    // model sees the routing rule before the individual tool descriptions.
+    order: 96,
+    text: LAZY_ROUTING_PROMPT,
+  })
 
   ctx.tools.register(defineTool({
     name: 'aaalice_agent_status',
@@ -38,7 +53,7 @@ export function apply(ctx: Context): void {
   ctx.tools.register(defineTool({
     name: 'aaalice_agent_send',
     description:
-      'Send a prompt to the Aaalice Agent. This may consume Anlas only when the Aaalice UI permission and approval flow allows it; do not assume generation was approved.',
+      'Default bridge for any image task: send the user\'s request to the Aaalice Agent for 生图/绘图/文生图/图生图, prompt conversion, AI reverse prompting, random artist-chain or style-lab work. Call this tool instead of merely explaining the steps. It may consume Anlas only when the Aaalice UI permission and approval flow allows it; do not assume generation was approved.',
     parameters: {
       text: {
         type: 'string',

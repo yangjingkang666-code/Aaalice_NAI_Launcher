@@ -5,8 +5,32 @@
   "description": "DeepSeek Harness tools for the optional local Aaalice Agent control API",
   "type": "module",
   "license": "MIT",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "src",
+    "cordis.patch.yml",
+    "README.md",
+    "package.json"
+  ],
   "scripts": {
+    "build": "node scripts/build.mjs",
     "test": "node --import tsx --test test/client.test.ts"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "*",
@@ -15,6 +39,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "esbuild": "^0.23.1",
     "tsx": "^4.19.0",
     "typescript": "^5.0.0"
   }

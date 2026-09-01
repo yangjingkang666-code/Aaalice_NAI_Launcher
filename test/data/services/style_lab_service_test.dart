@@ -54,6 +54,27 @@ void main() {
     expect(styles[2].mode, StyleLabPoolMode.random);
   });
 
+  test('artist normalization preserves parenthesized Danbooru aliases', () {
+    final artists = StyleLabService.parseArtistPool(
+      'ask_(artist)|10\n[wrapped name]\nartist:hiten_(hitenkei)',
+    );
+    expect(artists.map((artist) => artist.name), [
+      'ask_(artist)',
+      'wrapped_name',
+      'hiten_(hitenkei)',
+    ]);
+
+    final prompt = StyleLabService.formatArtistPrompt(
+      artists,
+      minWeight: 1,
+      maxWeight: 1,
+    );
+    expect(
+      prompt,
+      'artist:ask_(artist), artist:wrapped_name, artist:hiten_(hitenkei)',
+    );
+  });
+
   test('empty pools use the offline curated defaults', () {
     expect(StyleLabService.parseArtistPool(''), isNotEmpty);
     expect(StyleLabService.parseStylePool(''), isNotEmpty);

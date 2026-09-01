@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { isIP } from 'node:net'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 
 export const AGENT_CONTROL_PROTOCOL = 'aaalice-agent-control'
 export const AGENT_CONTROL_VERSION = '1'
@@ -12,6 +14,14 @@ export type JsonObject = { [key: string]: JsonValue }
 export interface AgentControlClientOptions {
   /** Path written by Aaalice's optional local control service. */
   descriptorPath?: string
+  /**
+   * Try the standard Aaalice support-directory locations when no descriptor
+   * path or URL/token pair was supplied. Enabled by default so a desktop
+   * Harness can work without a copied token or an environment variable.
+   */
+  autoDiscoverDescriptor?: boolean
+  /** Override the deterministic discovery candidates in host-side tests. */
+  descriptorSearchPaths?: readonly string[]
   /** Explicit loopback URL; takes precedence over descriptorPath. */
   baseUrl?: string
   /** Explicit bearer token; must be paired with baseUrl. */
@@ -47,6 +57,8 @@ export class AgentControlRemoteError extends Error {
 
 export class AaaliceAgentControlClient {
   private readonly descriptorPath: string | undefined
+  private readonly autoDiscoverDescriptor: boolean
+  private readonly descriptorSearchPaths: readonly string[] | undefined
   private readonly explicitBaseUrl: string | undefined
   private readonly explicitToken: string | undefined
   private readonly descriptorTtlMs: number
@@ -57,6 +69,8 @@ export class AaaliceAgentControlClient {
   constructor(options: AgentControlClientOptions = {}) {
     this.descriptorPath =
       options.descriptorPath ?? process.env.AAALICE_AGENT_CONTROL_DESCRIPTOR
+    this.autoDiscoverDescriptor = options.autoDiscoverDescriptor ?? true
+    this.descriptorSearchPaths = options.descriptorSearchPaths
     this.explicitBaseUrl =
       options.baseUrl ?? process.env.AAALICE_AGENT_CONTROL_URL
     this.explicitToken =
@@ -178,15 +192,10 @@ export class AaaliceAgentControlClient {
         token: this.explicitToken,
       }
     } else {
-      if (!this.descriptorPath) {
-        throw new AgentControlRemoteError(
-          'configuration',
-          'Set AAALICE_AGENT_CONTROL_DESCRIPTOR to the Aaalice agent-control-v1.json path, or provide the URL and token explicitly.',
-        )
-      }
+      const descriptorPath = await this.resolveDescriptorPath()
       let parsed: unknown
       try {
-        parsed = JSON.parse(await readFile(this.descriptorPath, 'utf8'))
+        parsed = JSON.parse(await readFile(descriptorPath, 'utf8'))
       } catch (error) {
         throw new AgentControlRemoteError(
           'configuration',
@@ -231,6 +240,72 @@ export class AaaliceAgentControlClient {
     this.cachedAt = now
     return this.cachedDescriptor
   }
+
+  /**
+   * Resolve the descriptor lazily on every cache miss. Aaalice creates and
+   * removes the file with its process, so discovery must happen at call time
+   * rather than when the Harness plugin is mounted.
+   */
+  private async resolveDescriptorPath(): Promise<string> {
+    if (this.descriptorPath !== undefined && this.descriptorPath.trim() !== '') {
+      return this.descriptorPath
+    }
+    if (!this.autoDiscoverDescriptor) {
+      throw new AgentControlRemoteError(
+        'configuration',
+        'Set AAALICE_AGENT_CONTROL_DESCRIPTOR to the Aaalice agent-control-v1.json path, or provide the URL and token explicitly.',
+      )
+    }
+
+    const candidates = this.descriptorSearchPaths ?? defaultDescriptorSearchPaths()
+    let lastError: unknown
+    for (const candidate of candidates) {
+      try {
+        // Reading is intentionally the existence check: it avoids a TOCTOU
+        // race while Aaalice is rotating the descriptor during startup.
+        await readFile(candidate, 'utf8')
+        return candidate
+      } catch (error) {
+        lastError = error
+        if (!isMissingFile(error)) throw new AgentControlRemoteError(
+          'configuration',
+          `Unable to read Aaalice Agent descriptor: ${error instanceof Error ? error.message : String(error)}`,
+        )
+      }
+    }
+
+    const first = candidates[0]
+    const location = first === undefined
+      ? 'the standard Aaalice support directory'
+      : candidates.length === 1
+        ? first
+        : `${first} (and ${candidates.length - 1} fallback location${candidates.length === 2 ? '' : 's'})`
+    const detail = lastError instanceof Error ? ` (${lastError.message})` : ''
+    throw new AgentControlRemoteError(
+      'configuration',
+      `Aaalice Agent descriptor was not found at ${location}${detail}. Start Aaalice with ENABLE_AGENT_CONTROL=true, or set AAALICE_AGENT_CONTROL_DESCRIPTOR / AAALICE_AGENT_CONTROL_URL + AAALICE_AGENT_CONTROL_TOKEN.`,
+    )
+  }
+}
+
+function defaultDescriptorSearchPaths(): string[] {
+  const paths: string[] = []
+  const add = (root: string | undefined, ...parts: string[]) => {
+    if (!root || root.trim() === '') return
+    const candidate = join(root, ...parts)
+    if (!paths.includes(candidate)) paths.push(candidate)
+  }
+  const relative = ['com.example', 'nai_launcher', 'agent', 'agent-control-v1.json']
+  add(process.env.APPDATA, ...relative)
+  add(process.env.LOCALAPPDATA, ...relative)
+  add(join(homedir(), 'AppData', 'Roaming'), ...relative)
+  add(join(homedir(), 'AppData', 'Local'), ...relative)
+  return paths
+}
+
+function isMissingFile(error: unknown): boolean {
+  return typeof error === 'object' && error !== null &&
+    'code' in error && (error as { code?: unknown }).code === 'ENOENT'
 }
 
 function normalizeLoopbackUrl(value: string): string {

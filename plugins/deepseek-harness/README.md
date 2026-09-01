@@ -30,31 +30,43 @@ $env:AAALICE_AGENT_CONTROL_TOKEN = '从发现文件取得的令牌'
 $env:AAALICE_AGENT_CONTROL_DESCRIPTOR = 'C:\path\to\agent-control-v1.json'
 ```
 
+桌面版插件默认会自动搜索 Aaalice 的标准 Windows 支持目录：
+`%APPDATA%\com.example\nai_launcher\agent\agent-control-v1.json`（并依次
+尝试 LocalAppData 备用目录）。因此不需要复制 token，也不需要在 Harness
+里配置环境变量；只要启动的是带 `ENABLE_AGENT_CONTROL=true` 的 Aaalice
+构建，插件会在每次调用时懒加载最新描述文件。
+
 接口只绑定 `127.0.0.1`，每个请求都要求 bearer token；生成相关命令仍由
 Aaalice 现有 Agent 权限确认与 Anlas 审计链处理。
 
 ### 2. 在 Harness 中加载插件
 
-DeepSeek Harness 的本地插件路径必须是绝对路径。创建一个 overlay，例如
-`scratch-plugin/cordis.yml`：
+推荐通过 DSH 的 profile 插件管理器安装本目录（`file:` 会把包复制到
+profile，避免 Windows 外部路径的 ESM/peer 解析问题）：
 
-```yaml
-- insert:
-    - id: aaalice-agent-control
-      name: 'C:/path/to/Aaalice_NAI_Launcher/plugins/deepseek-harness/src/index.ts'
+```powershell
+# 命令行（在 DSH 安装目录或桌面版使用的同一 Node 环境执行）
+node <dsh>/lib/bin.js plugin --profile web add \
+  file:C:/path/to/Aaalice_NAI_Launcher/plugins/deepseek-harness
 ```
 
-从 DeepSeek Harness 仓库根目录启动 Web UI：
+安装后 `dsh.profile.bundles` 会自动加入
+`@aaalice/deepseek-harness-agent-control`，以后直接启动桌面版即可：
 
-```sh
-pnpm dsh web --patch ./scratch-plugin/cordis.yml
+```powershell
+DeepSeek Harness - Phrolova Edition.lnk
 ```
+
+若需要一次性测试临时包，也可以将 `cordis.patch.yml` 作为 `--patch` overlay；
+不要直接把 Windows `C:\...` 路径写进 loader 的 `name`，当前 DSH CLI 会把它
+当成无效的 ESM URL。
 
 ### 3. 可用工具
 
 - `aaalice_agent_status`：读取运行状态、队列和审批元数据，不返回完整会话记录。
-- `aaalice_agent_send`：向 Aaalice Agent 发送提示词，可选择排队；可能触发生成，
-  但不会绕过应用内授权。
+- `aaalice_agent_send`：向 Aaalice Agent 发送提示词，可选择排队；它是“生图 /
+  文生图 / 图生图 / 反推 / 提示词转换 / 画风实验室”的默认桥接入口，可能触发
+  生成，但不会绕过应用内授权。
 - `aaalice_agent_abort`：中止当前运行。
 - `aaalice_style_lab_plan`：离线生成随机画师串 A/B 提示词对，不访问 NovelAI，
   不消耗 Anlas。
@@ -83,7 +95,9 @@ plugin at the generated `agent/agent-control-v1.json` through
 the descriptor private because it contains the bearer token. The client rejects
 non-loopback URLs.
 
-Load the absolute `src/index.ts` path through a Harness `cordis.yml` overlay and
-start `pnpm dsh web --patch ./scratch-plugin/cordis.yml`. The registered tools
-are `aaalice_agent_status`, `aaalice_agent_send`, `aaalice_agent_abort`, and
-`aaalice_style_lab_plan`.
+Install the local package with `dsh plugin --profile web add file:<path>`. The
+package ships a `dsh.bundle` manifest, so the desktop profile loads its compiled
+JavaScript entry and system-prompt routing rule on every start. The client lazily
+discovers Aaalice's standard Windows descriptor when no environment variable is
+set. The registered tools are `aaalice_agent_status`, `aaalice_agent_send`,
+`aaalice_agent_abort`, and `aaalice_style_lab_plan`.

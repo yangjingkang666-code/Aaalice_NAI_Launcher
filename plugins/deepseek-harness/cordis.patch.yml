@@ -1,0 +1,6 @@
+# Mount the Aaalice bridge into the host-plane DSH tool and prompt registries.
+# The package name is intentionally bare: DSH resolves it from the profile's
+# pnpm-installed node_modules, which works in the packaged Windows launcher.
+- insert:
+    - id: aaalice-agent-control
+      name: '@aaalice/deepseek-harness-agent-control'

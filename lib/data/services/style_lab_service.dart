@@ -210,10 +210,28 @@ class StyleLabService {
     var normalized = value.trim();
     normalized = normalized.replaceFirst(RegExp(r'^artist\s*:\s*'), '');
     normalized = normalized.replaceFirst(RegExp(r'^artist\s+'), '');
-    normalized = normalized.replaceAll(
-      RegExp(r"^[\[\]{}()']+|[\[\]{}()']+$"),
-      '',
-    );
+    // Only remove a delimiter when it wraps the whole value.  Parenthesized
+    // suffixes such as `ask_(artist)` are part of valid Danbooru artist tags
+    // and must not be truncated at the end of the name.
+    const wrappers = <String, String>{
+      '[': ']',
+      '{': '}',
+      '(': ')',
+      "'": "'",
+      '"': '"',
+    };
+    var unwrapped = true;
+    while (unwrapped && normalized.length >= 2) {
+      unwrapped = false;
+      for (final entry in wrappers.entries) {
+        if (normalized.startsWith(entry.key) &&
+            normalized.endsWith(entry.value)) {
+          normalized = normalized.substring(1, normalized.length - 1).trim();
+          unwrapped = true;
+          break;
+        }
+      }
+    }
     normalized = normalized.replaceAll(RegExp(r'\s+'), '_');
     return normalized.trim();
   }
