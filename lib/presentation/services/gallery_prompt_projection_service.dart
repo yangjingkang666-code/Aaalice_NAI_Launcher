@@ -20,12 +20,18 @@ class GalleryPromptProjectionService {
       item,
       outputFilter: outputFilter,
     );
+    final detailItemTagPrompt = detail == null
+        ? null
+        : promptTagSettings.promptFor(detail.item, outputFilter: outputFilter);
+    final detailRawTagPrompt = _joinNonBlank(detail?.rawTags);
     final rawPositivePrompt = _firstNonBlank([
       media?.prompt,
       detail?.prompt,
       item.cover.prompt,
       _metadataString(item.rawSourceMetadata, 'prompt'),
+      detailRawTagPrompt,
       generatedTagPrompt,
+      detailItemTagPrompt,
     ]);
     final positivePrompt = projectPositivePrompt(
       rawPositivePrompt ?? '',
@@ -123,6 +129,15 @@ class GalleryPromptProjectionService {
   String? _metadataString(Map<String, dynamic> metadata, String key) {
     final value = metadata[key]?.toString();
     return value == null || value.trim().isEmpty ? null : value;
+  }
+
+  String? _joinNonBlank(Iterable<String>? values) {
+    if (values == null) return null;
+    final nonBlank = values
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toList(growable: false);
+    return nonBlank.isEmpty ? null : nonBlank.join(', ');
   }
 
   String? _firstNonBlank(Iterable<String?> values) {

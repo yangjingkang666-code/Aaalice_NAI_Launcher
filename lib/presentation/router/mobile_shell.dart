@@ -69,8 +69,12 @@ class MobileShell extends ConsumerWidget {
               onClose: closePanel,
               onQueueStarted: () =>
                   navigationShell.goBranch(AppBranch.generation.index),
-              onOpenAgentSettings: () =>
-                  navigationShell.goBranch(AppBranch.settings.index),
+              onOpenAgentSettings: () {
+                // Close the full-screen drawer before navigating; otherwise
+                // it stays above Settings and swallows the visible result.
+                ref.read(shellPanelProvider.notifier).state = null;
+                context.go('${AppRoutes.settings}?section=agent');
+              },
             ),
           ],
         ),

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../agent_chat/providers/agent_chat_notifier.dart';
 import '../widgets/navigation/main_nav_rail.dart';
 import 'app_branch.dart';
+import 'app_routes.dart';
 import 'global_status_banners.dart';
 import 'shell_panels_overlay.dart';
 
@@ -108,9 +109,15 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                     onQueueStarted: () => widget.navigationShell.goBranch(
                       AppBranch.generation.index,
                     ),
-                    onOpenAgentSettings: () => widget.navigationShell.goBranch(
-                      AppBranch.settings.index,
-                    ),
+                    onOpenAgentSettings: () {
+                      // The settings entry is a shell-level overlay.  Close it
+                      // before switching branches, otherwise the full-height agent
+                      // drawer remains on top of the settings page and makes the
+                      // click appear to do nothing.  Preserve the requested section
+                      // as well; a bare branch switch opens Account by default.
+                      _setPanel(null);
+                      context.go('${AppRoutes.settings}?section=agent');
+                    },
                   ),
                 ],
               ),

@@ -266,18 +266,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get nav_dictionary => '词库';
 
   @override
-  String get nav_discordCommunity => 'Discord 社群';
-
-  @override
-  String get nav_githubRepo => 'GitHub 仓库';
-
-  @override
-  String get nav_joinDiscord => '加入 Discord';
-
-  @override
-  String get nav_projectRepository => '项目仓库';
-
-  @override
   String get nav_expandSidebar => '展开侧边栏';
 
   @override
@@ -13766,18 +13754,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get nav_dictionary => '詞庫';
-
-  @override
-  String get nav_discordCommunity => 'Discord 社群';
-
-  @override
-  String get nav_githubRepo => 'GitHub 倉庫';
-
-  @override
-  String get nav_joinDiscord => '加入 Discord';
-
-  @override
-  String get nav_projectRepository => '專案倉庫';
 
   @override
   String get nav_expandSidebar => '展開側邊欄';

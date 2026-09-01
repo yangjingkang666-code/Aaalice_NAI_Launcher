@@ -268,18 +268,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get nav_dictionary => '辞書';
 
   @override
-  String get nav_discordCommunity => 'Discord コミュニティ';
-
-  @override
-  String get nav_githubRepo => 'GitHub リポジトリ';
-
-  @override
-  String get nav_joinDiscord => 'Discord に参加';
-
-  @override
-  String get nav_projectRepository => 'プロジェクトリポジトリ';
-
-  @override
   String get nav_expandSidebar => 'サイドバーを展開';
 
   @override

@@ -195,13 +195,8 @@ void main() {
     await tester.tap(moreDestination);
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('mobile-more-agent')), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.byKey(const ValueKey('mobile-more-discord')),
-      180,
-      scrollable: find.byType(Scrollable).last,
-    );
-    expect(find.byKey(const ValueKey('mobile-more-discord')), findsOneWidget);
-    expect(find.byKey(const ValueKey('mobile-more-github')), findsOneWidget);
+    expect(find.byKey(const ValueKey('mobile-more-discord')), findsNothing);
+    expect(find.byKey(const ValueKey('mobile-more-github')), findsNothing);
     expect(tester.takeException(), isNull);
     router.pop();
     await tester.pumpAndSettle();
@@ -344,6 +339,14 @@ void main() {
                 ),
               ],
             ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/settings',
+                  builder: (context, state) => const SizedBox.expand(),
+                ),
+              ],
+            ),
           ],
         ),
       ],
@@ -384,6 +387,28 @@ void main() {
       tester.getSize(find.byKey(const ValueKey('shell-panel-surface'))).width,
       520,
     );
+
+    await tester.tap(find.byKey(const ValueKey('agent-chat-desktop-more')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    final settingsMenuItem = find.text('智能体').last;
+    expect(settingsMenuItem, findsOneWidget);
+    await tester.tap(settingsMenuItem);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(router.routeInformationProvider.value.uri.path, '/settings');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['section'],
+      'agent',
+    );
+    expect(container.read(shellPanelProvider), isNull);
+
+    await tester.tap(
+      find.descendant(of: agentEntry, matching: find.byType(Icon)).first,
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(container.read(shellPanelProvider), ShellPanel.agent);
 
     await tester.tap(find.byIcon(Icons.folder));
     await tester.pump();

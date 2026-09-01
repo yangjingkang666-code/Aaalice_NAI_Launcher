@@ -70,6 +70,48 @@ void main() {
       expect(result.positivePrompt, 'blue_hair, watermark_background');
     });
 
+    test(
+      'projects raw detail tags when the adapter has no structured prompt',
+      () {
+        const item = GalleryItem(id: 31, sourceId: GallerySourceId.gelbooru);
+        const detail = GalleryDetail(
+          item: item,
+          media: [],
+          rawTags: ['portrait', 'watermark'],
+        );
+
+        final result = service.project(
+          item: item,
+          detail: detail,
+          promptTagSettings: defaultPromptSettings,
+          outputFilter: outputFilter,
+        );
+
+        expect(result.positivePrompt, 'portrait');
+        expect(result.hasUsableOutput, isTrue);
+      },
+    );
+
+    test('uses tags from the detail item when the list item is sparse', () {
+      const item = GalleryItem(id: 32, sourceId: GallerySourceId.gelbooru);
+      const detailItem = GalleryItem(
+        id: 32,
+        sourceId: GallerySourceId.gelbooru,
+        tags: ['detail_tag'],
+      );
+      const detail = GalleryDetail(item: detailItem, media: []);
+
+      final result = service.project(
+        item: item,
+        detail: detail,
+        promptTagSettings: defaultPromptSettings,
+        outputFilter: outputFilter,
+      );
+
+      expect(result.positivePrompt, 'detail_tag');
+      expect(result.hasUsableOutput, isTrue);
+    });
+
     test('projects the current AI TAG media ahead of detail defaults', () {
       const firstMedia = GalleryMedia(
         id: 'first',

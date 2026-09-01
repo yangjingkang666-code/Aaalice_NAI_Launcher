@@ -599,30 +599,6 @@ abstract class AppLocalizations {
   /// **'Dictionary'**
   String get nav_dictionary;
 
-  /// No description provided for @nav_discordCommunity.
-  ///
-  /// In en, this message translates to:
-  /// **'Discord Community'**
-  String get nav_discordCommunity;
-
-  /// No description provided for @nav_githubRepo.
-  ///
-  /// In en, this message translates to:
-  /// **'GitHub Repository'**
-  String get nav_githubRepo;
-
-  /// No description provided for @nav_joinDiscord.
-  ///
-  /// In en, this message translates to:
-  /// **'Join Discord'**
-  String get nav_joinDiscord;
-
-  /// No description provided for @nav_projectRepository.
-  ///
-  /// In en, this message translates to:
-  /// **'Project repository'**
-  String get nav_projectRepository;
-
   /// No description provided for @nav_expandSidebar.
   ///
   /// In en, this message translates to:

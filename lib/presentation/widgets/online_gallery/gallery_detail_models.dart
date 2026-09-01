@@ -163,8 +163,23 @@ class GalleryDetailViewModel {
             character.negativePrompt.trim().isNotEmpty,
       )
       .toList(growable: false);
+
+  /// Source adapters do not all return a structured prompt in the detail
+  /// payload.  Danbooru/Gelbooru entries commonly expose only the tags that
+  /// are already rendered in the detail view.  Treat those tags as usable
+  /// generation content so the primary actions do not look disabled for an
+  /// otherwise valid gallery entry.
+  bool get hasTagContent =>
+      [...item.tags, ...detail.item.tags, ...detail.rawTags].any((tag) {
+        final value = tag.trim();
+        return value.isNotEmpty && !isOutputFiltered(value);
+      });
+
   bool get hasCopyableContent =>
-      hasPrompt || hasNegativePrompt || displayCharacterPrompts.isNotEmpty;
+      hasPrompt ||
+      hasNegativePrompt ||
+      displayCharacterPrompts.isNotEmpty ||
+      hasTagContent;
   List<String> get currentRawTags {
     final mediaRawTags = currentMedia?.rawMetadata?.trim() ?? '';
     return mediaRawTags.isEmpty ? detail.rawTags : [mediaRawTags];

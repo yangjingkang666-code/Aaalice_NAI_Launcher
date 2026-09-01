@@ -6,7 +6,6 @@ import 'package:nai_launcher/core/utils/localization_extension.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_version.dart';
-import '../../../core/constants/community_links.dart';
 import '../../../data/models/auth/saved_account.dart';
 import '../../providers/account_manager_provider.dart';
 import '../../providers/auth_mode_provider.dart';
@@ -225,20 +224,6 @@ class MainNavRail extends ConsumerWidget {
                 ],
               ),
             ),
-          ),
-
-          // Discord 社群
-          _ExternalLinkIcon(
-            icon: Icons.discord,
-            label: context.l10n.nav_discordCommunity,
-            color: const Color(0xFF5865F2), // Discord 紫色
-            url: CommunityLinks.discord,
-          ),
-
-          // GitHub 仓库
-          _GitHubIcon(
-            url: CommunityLinks.github,
-            label: context.l10n.nav_githubRepo,
           ),
 
           _NavIcon(

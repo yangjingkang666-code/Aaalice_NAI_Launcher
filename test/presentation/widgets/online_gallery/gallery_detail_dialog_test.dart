@@ -241,6 +241,67 @@ void main() {
     expect(find.widgetWithText(OutlinedButton, 'Reverse'), findsNothing);
   });
 
+  testWidgets('tag-only gallery details keep generation actions enabled', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    const item = GalleryItem(
+      id: 99,
+      workId: 'tag-only',
+      sourceId: GallerySourceId.gelbooru,
+      tags: ['solo', 'blue_hair'],
+      tagString: 'solo blue_hair',
+    );
+    const detail = GalleryDetail(item: item, media: []);
+    var generated = false;
+    var queued = false;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: GalleryDetailDialog(
+              item: item,
+              detail: detail,
+              isFavorited: false,
+              favoriteLoading: false,
+              labels: _labels(),
+              onCopyPrompt: () {},
+              onCopyNegativePrompt: () {},
+              onCopyCharacter: (_) {},
+              onCopyAll: () {},
+              onToggleFavorite: () async => true,
+              onOpenSource: () {},
+              onSendToGenerate: () => generated = true,
+              onAddToQueue: () async => queued = true,
+              onDownloadCurrentOriginal: (_) async {},
+              onTagSearch: (_) {},
+              onBlacklistChanged: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final generate = find.widgetWithText(FilledButton, 'Generate');
+    final queue = find.widgetWithText(OutlinedButton, 'Queue');
+    expect(tester.widget<FilledButton>(generate).onPressed, isNotNull);
+    expect(tester.widget<OutlinedButton>(queue).onPressed, isNotNull);
+    await tester.tap(generate);
+    await tester.tap(queue);
+    await tester.pumpAndSettle();
+    expect(generated, isTrue);
+    expect(queued, isTrue);
+  });
+
   testWidgets('tag context menu searches one normalized tag', (tester) async {
     tester.view.physicalSize = const Size(1280, 900);
     tester.view.devicePixelRatio = 1;

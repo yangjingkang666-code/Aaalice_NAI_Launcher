@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/constants/community_links.dart';
 import '../../core/utils/localization_extension.dart';
 import '../adaptive/adaptive_presenter.dart';
 import '../agent_chat/providers/agent_chat_notifier.dart';
 import '../providers/replication_queue_provider.dart';
 import '../providers/update_provider.dart';
 import '../screens/style_lab/style_lab_copy.dart';
-import '../widgets/common/app_toast.dart';
-import '../widgets/navigation/main_nav_rail.dart';
 import 'app_branch.dart';
 import 'app_routes.dart';
 import 'shell_panels_overlay.dart';
@@ -114,53 +110,9 @@ Future<void> showMobileMorePanel({
           onTap: () =>
               _selectBranch(panelContext, navigationShell, AppBranch.settings),
         ),
-        const Divider(indent: 16, endIndent: 16),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-          child: Row(
-            children: [
-              Expanded(
-                child: _MobileCommunityButton(
-                  key: const ValueKey('mobile-more-discord'),
-                  icon: const Icon(Icons.discord, size: 20),
-                  label: panelContext.l10n.nav_joinDiscord,
-                  backgroundColor: const Color(0xFF5865F2),
-                  onPressed: () =>
-                      _openCommunityLink(panelContext, CommunityLinks.discord),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _MobileCommunityButton(
-                  key: const ValueKey('mobile-more-github'),
-                  icon: const GitHubLogo(color: Colors.white, size: 20),
-                  label: panelContext.l10n.nav_projectRepository,
-                  backgroundColor: const Color(0xFF2D333B),
-                  onPressed: () =>
-                      _openCommunityLink(panelContext, CommunityLinks.github),
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     ),
   );
-}
-
-Future<void> _openCommunityLink(BuildContext panelContext, String url) async {
-  var opened = false;
-  try {
-    opened = await launchUrl(
-      Uri.parse(url),
-      mode: LaunchMode.externalApplication,
-    );
-  } catch (_) {
-    opened = false;
-  }
-  if (!opened && panelContext.mounted) {
-    AppToast.error(panelContext, panelContext.l10n.cannotOpenUrl);
-  }
 }
 
 void _selectBranch(
@@ -170,36 +122,6 @@ void _selectBranch(
 ) {
   Navigator.of(panelContext).pop();
   navigationShell.goBranch(branch.index);
-}
-
-class _MobileCommunityButton extends StatelessWidget {
-  const _MobileCommunityButton({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.backgroundColor,
-    required this.onPressed,
-  });
-
-  final Widget icon;
-  final String label;
-  final Color backgroundColor;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return FilledButton.tonalIcon(
-      onPressed: onPressed,
-      style: FilledButton.styleFrom(
-        backgroundColor: backgroundColor,
-        foregroundColor: Colors.white,
-        minimumSize: const Size.fromHeight(56),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-      ),
-      icon: icon,
-      label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
-    );
-  }
 }
 
 class _MobileMoreDestination extends StatelessWidget {
