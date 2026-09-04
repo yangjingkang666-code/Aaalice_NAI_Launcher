@@ -3186,7 +3186,23 @@
   "promptAssistant_supportsImageInput": "支援圖片輸入",
   "promptAssistant_textOnly": "僅文字",
   "promptAssistant_connectionConfig": "連線配置",
+  "promptAssistant_testConnection": "測試連線",
+  "promptAssistant_testingConnection": "正在測試模型連線…",
+  "promptAssistant_connectionTestSucceeded": "模型連線成功：{model}",
+  "@promptAssistant_connectionTestSucceeded": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "promptAssistant_connectionTestFailed": "模型連線失敗：{error}",
+  "@promptAssistant_connectionTestFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "promptAssistant_pullModelList": "拉取模型列表",
+  "promptAssistant_addModel": "新增模型",
+  "promptAssistant_manualModelHint": "輸入一個或多個模型 ID，可用逗號或換行分隔。",
   "promptAssistant_editProvider": "編輯服務商",
   "promptAssistant_deleteProvider": "刪除服務商",
   "promptAssistant_pullingModels": "正在拉取模型列表...",
@@ -3195,6 +3211,18 @@
   "@promptAssistant_modelsSynced": {
     "placeholders": {
       "count": {}
+    }
+  },
+  "promptAssistant_modelsAdded": "已新增 {count} 個模型",
+  "@promptAssistant_modelsAdded": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "promptAssistant_addModelsFailed": "新增模型失敗：{error}",
+  "@promptAssistant_addModelsFailed": {
+    "placeholders": {
+      "error": {}
     }
   },
   "promptAssistant_pullModelsFailed": "拉取模型失敗: {error}",

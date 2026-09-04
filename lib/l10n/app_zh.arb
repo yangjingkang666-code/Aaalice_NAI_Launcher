@@ -3173,7 +3173,23 @@
   "promptAssistant_supportsImageInput": "支持图片输入",
   "promptAssistant_textOnly": "仅文本",
   "promptAssistant_connectionConfig": "连接配置",
+  "promptAssistant_testConnection": "测试连接",
+  "promptAssistant_testingConnection": "正在测试模型连接…",
+  "promptAssistant_connectionTestSucceeded": "模型连接成功：{model}",
+  "@promptAssistant_connectionTestSucceeded": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "promptAssistant_connectionTestFailed": "模型连接失败：{error}",
+  "@promptAssistant_connectionTestFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "promptAssistant_pullModelList": "拉取模型列表",
+  "promptAssistant_addModel": "添加模型",
+  "promptAssistant_manualModelHint": "输入一个或多个模型 ID，可用逗号或换行分隔。",
   "promptAssistant_editProvider": "编辑服务商",
   "promptAssistant_deleteProvider": "删除服务商",
   "promptAssistant_pullingModels": "正在拉取模型列表...",
@@ -3182,6 +3198,18 @@
   "@promptAssistant_modelsSynced": {
     "placeholders": {
       "count": {}
+    }
+  },
+  "promptAssistant_modelsAdded": "已添加 {count} 个模型",
+  "@promptAssistant_modelsAdded": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "promptAssistant_addModelsFailed": "添加模型失败：{error}",
+  "@promptAssistant_addModelsFailed": {
+    "placeholders": {
+      "error": {}
     }
   },
   "promptAssistant_pullModelsFailed": "拉取模型失败: {error}",

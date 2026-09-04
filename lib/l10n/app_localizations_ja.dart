@@ -6786,7 +6786,30 @@ class AppLocalizationsJa extends AppLocalizations {
   String get promptAssistant_connectionConfig => '接続構成';
 
   @override
+  String get promptAssistant_testConnection => '接続をテスト';
+
+  @override
+  String get promptAssistant_testingConnection => 'モデル接続をテストしています…';
+
+  @override
+  String promptAssistant_connectionTestSucceeded(Object model) {
+    return 'モデル接続に成功しました: $model';
+  }
+
+  @override
+  String promptAssistant_connectionTestFailed(Object error) {
+    return 'モデル接続に失敗しました: $error';
+  }
+
+  @override
   String get promptAssistant_pullModelList => 'モデルリストをプルします';
+
+  @override
+  String get promptAssistant_addModel => 'モデルを追加';
+
+  @override
+  String get promptAssistant_manualModelHint =>
+      '1 つ以上のモデル ID をカンマまたは改行で区切って入力します。';
 
   @override
   String get promptAssistant_editProvider => 'プロバイダーの編集';
@@ -6803,6 +6826,16 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String promptAssistant_modelsSynced(Object count) {
     return '同期された $count モデル';
+  }
+
+  @override
+  String promptAssistant_modelsAdded(Object count) {
+    return '$count モデルを追加しました';
+  }
+
+  @override
+  String promptAssistant_addModelsFailed(Object error) {
+    return 'モデルの追加に失敗しました: $error';
   }
 
   @override

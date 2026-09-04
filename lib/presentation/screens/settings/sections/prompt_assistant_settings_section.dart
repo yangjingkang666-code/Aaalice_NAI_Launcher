@@ -330,6 +330,20 @@ class PromptAssistantSettingsSection extends ConsumerWidget {
                 ),
                 Icon(hasApiKey ? Icons.key : Icons.key_off, size: 18),
                 IconButton(
+                  key: ValueKey('prompt-assistant-test-model-${provider.id}'),
+                  icon: const Icon(Icons.network_check_outlined),
+                  tooltip: context.l10n.promptAssistant_testConnection,
+                  onPressed: () =>
+                      _testProviderConnection(context, ref, provider.id),
+                ),
+                IconButton(
+                  key: ValueKey('prompt-assistant-add-model-${provider.id}'),
+                  icon: const Icon(Icons.add_box_outlined),
+                  tooltip: context.l10n.promptAssistant_addModel,
+                  onPressed: () =>
+                      _showManualModelsDialog(context, notifier, provider),
+                ),
+                IconButton(
                   icon: const Icon(Icons.download_for_offline_outlined),
                   tooltip: context.l10n.promptAssistant_pullModelList,
                   onPressed: () =>
@@ -440,6 +454,72 @@ class PromptAssistantSettingsSection extends ConsumerWidget {
     } catch (e) {
       messenger?.showSnackBar(
         SnackBar(content: Text(l10n.promptAssistant_pullModelsFailed('$e'))),
+      );
+    }
+  }
+
+  Future<void> _testProviderConnection(
+    BuildContext context,
+    WidgetRef ref,
+    String providerId,
+  ) async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.showSnackBar(
+      SnackBar(content: Text(l10n.promptAssistant_testingConnection)),
+    );
+
+    try {
+      final result = await ref
+          .read(promptAssistantServiceProvider)
+          .testProviderConnection(providerId);
+      if (!context.mounted) return;
+      messenger
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.promptAssistant_connectionTestSucceeded(result.model),
+            ),
+          ),
+        );
+    } catch (error) {
+      if (!context.mounted) return;
+      messenger
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(l10n.promptAssistant_connectionTestFailed('$error')),
+          ),
+        );
+    }
+  }
+
+  Future<void> _showManualModelsDialog(
+    BuildContext context,
+    PromptAssistantConfigNotifier notifier,
+    ProviderConfig provider,
+  ) async {
+    final names = await showDialog<List<String>>(
+      context: context,
+      builder: (_) => _ManualModelsDialog(provider: provider),
+    );
+    if (names == null || !context.mounted) return;
+
+    try {
+      final added = await notifier.addManualModels(provider.id, names);
+      if (!context.mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.promptAssistant_modelsAdded(added)),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.promptAssistant_addModelsFailed('$error')),
+        ),
       );
     }
   }
@@ -972,5 +1052,80 @@ class PromptAssistantSettingsSection extends ConsumerWidget {
     }
     if (defaultRule == null) return false;
     return rule.content.trim() == defaultRule.content.trim();
+  }
+}
+
+class _ManualModelsDialog extends StatefulWidget {
+  const _ManualModelsDialog({required this.provider});
+
+  final ProviderConfig provider;
+
+  @override
+  State<_ManualModelsDialog> createState() => _ManualModelsDialogState();
+}
+
+class _ManualModelsDialogState extends State<_ManualModelsDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final parsed = _parseManualModelNames(_controller.text);
+    return AlertDialog(
+      title: Text(
+        '${widget.provider.name} · ${context.l10n.promptAssistant_addModel}',
+      ),
+      content: SizedBox(
+        width: 440,
+        child: TextField(
+          key: const ValueKey('prompt-assistant-manual-model-input'),
+          controller: _controller,
+          minLines: 3,
+          maxLines: 8,
+          autofocus: true,
+          onChanged: (_) => setState(() {}),
+          decoration: InputDecoration(
+            labelText: context.l10n.promptAssistant_model,
+            hintText: context.l10n.promptAssistant_manualModelHint,
+            alignLabelWithHint: true,
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(context.l10n.common_cancel),
+        ),
+        FilledButton(
+          key: const ValueKey('prompt-assistant-save-manual-models'),
+          onPressed: parsed.isEmpty
+              ? null
+              : () => Navigator.pop(context, parsed),
+          child: Text(context.l10n.common_save),
+        ),
+      ],
+    );
+  }
+
+  List<String> _parseManualModelNames(String raw) {
+    final names = <String>[];
+    final seen = <String>{};
+    for (final value in raw.split(RegExp(r'[,\r\n]+'))) {
+      final name = value.trim();
+      if (name.isEmpty || !seen.add(name)) continue;
+      names.add(name);
+    }
+    return names;
   }
 }

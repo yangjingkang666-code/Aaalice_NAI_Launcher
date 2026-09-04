@@ -75,6 +75,20 @@ class AiBatchPlanProposal {
   final String routeFingerprint;
 }
 
+/// Result returned by the provider connection check in Settings.
+///
+/// The check deliberately uses a text-only completion so it validates the
+/// configured protocol, API key and model without starting an image task.
+class ProviderConnectionTestResult {
+  const ProviderConnectionTestResult({
+    required this.model,
+    required this.response,
+  });
+
+  final String model;
+  final String response;
+}
+
 class PromptAssistantService {
   PromptAssistantService({
     required Ref ref,
@@ -99,6 +113,68 @@ class PromptAssistantService {
         .read(promptAssistantConfigProvider.notifier)
         .getProviderApiKey(provider.id);
     return _apiClient.fetchModels(provider: provider, apiKey: apiKey);
+  }
+
+  /// Sends a minimal text request through a specific provider and model.
+  ///
+  /// This is intentionally independent from task routing: a user may want to
+  /// validate a newly added provider before making it the active route.  The
+  /// selected model is the currently routed chat model when it belongs to the
+  /// provider, otherwise the first real chat model for that provider.  The
+  /// provider preset's default is used as a final fallback when no model entry
+  /// exists.
+  Future<ProviderConnectionTestResult> testProviderConnection(
+    String providerId,
+  ) async {
+    final config = _ref.read(promptAssistantConfigProvider);
+    final provider = config.providers.firstWhere(
+      (p) => p.id == providerId,
+      orElse: () => throw StateError('Provider not found: $providerId'),
+    );
+    final models = config.modelsForProviderTask(
+      providerId: provider.id,
+      taskType: AssistantTaskType.chat,
+    );
+    final routedModel = config.routing.providerIdFor(AssistantTaskType.chat) ==
+            provider.id
+        ? config.routing.modelFor(AssistantTaskType.chat).trim()
+        : '';
+    final model = models.firstWhere(
+      (candidate) =>
+          !candidate.isPlaceholder &&
+          routedModel.isNotEmpty &&
+          candidate.name == routedModel,
+      orElse: () => models.firstWhere(
+        (candidate) => !candidate.isPlaceholder,
+        orElse: () => _fallbackModelForProvider(
+          provider: provider,
+          routingModel: '',
+          taskType: AssistantTaskType.chat,
+        ),
+      ),
+    );
+    final apiKey = await _ref
+        .read(promptAssistantConfigProvider.notifier)
+        .getProviderApiKey(provider.id);
+    if (provider.preset?.requiresApiKey == true &&
+        (apiKey == null || apiKey.trim().isEmpty)) {
+      throw StateError('Provider ${provider.name} has no API key configured.');
+    }
+
+    final response = await _completeRequest(
+      PromptAssistantRequest(
+        sessionId: 'connection-test-${DateTime.now().microsecondsSinceEpoch}',
+        provider: provider,
+        model: model.name,
+        systemPrompt:
+            'You are a connection check. Reply with exactly OK and nothing else.',
+        userParts: [PromptAssistantContentPart.text('Reply with OK.')],
+        apiKey: apiKey,
+        maxOutputTokens: 16,
+        reasoningMode: PromptAssistantReasoningMode.disabled,
+      ),
+    );
+    return ProviderConnectionTestResult(model: model.name, response: response);
   }
 
   Stream<StreamingChunk> optimizePrompt(

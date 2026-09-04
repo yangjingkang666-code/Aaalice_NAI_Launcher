@@ -120,12 +120,17 @@ class _ModelCard extends ConsumerWidget {
     for (final provider in promptConfig.providers.where(
       (item) => item.enabled,
     )) {
-      for (final model in promptConfig.models.where(
-        (item) =>
-            item.providerId == provider.id &&
-            item.forTask == AssistantTaskType.chat &&
-            !item.isPlaceholder,
-      )) {
+      // Prefer chat-scoped entries, but also accept a model that was imported
+      // or added before the task expansion ran.  The config state helper
+      // normalizes those entries to the chat task without discarding a valid
+      // provider/model pair.
+      for (final model
+          in promptConfig
+              .modelsForProviderTask(
+                providerId: provider.id,
+                taskType: AssistantTaskType.chat,
+              )
+              .where((item) => !item.isPlaceholder)) {
         available.add(
           AgentModelReference(providerId: provider.id, model: model.name),
         );

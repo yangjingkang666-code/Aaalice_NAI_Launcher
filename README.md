@@ -61,6 +61,7 @@ NAI Launcher 面向长期使用 NovelAI 的创作者：生成图片、反复调�
 ### 🤝 协作与连接
 
 - **智能代理**：在生成页侧栏或移动端抽屉中对话，让它协助检索标签、整理 Prompt、查看历史并准备生成；所有可能消耗 Anlas 的操作都会单独确认。
+- **模型服务商设置**：为翻译、反推和智能代理分别选择服务商与模型；兼容端点可手动添加模型，并用“测试连接”验证当前模型。
 - **可选的本地 Agent 控制接口**：显式启用后，DeepSeek Harness 等外部 Agent 可通过回环地址调用状态、对话、中止和离线画风实验室规划；令牌、权限确认与 Anlas 审计仍由 Launcher 管理。详见 [`plugins/deepseek-harness/README.md`](plugins/deepseek-harness/README.md)。
 - **图片反推证据链**：可选的本地 JoyTag + WD EVA02 顺序标签作为证据，再交由配置的图片反推模型整合；本地标签失败会保留审计信息，不会自动生成。
 - **桌面联动**：连接 Krita Bridge 与本地 ComfyUI 工作流，把生成和编辑接到已有创作工具中。

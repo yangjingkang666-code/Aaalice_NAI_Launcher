@@ -168,6 +168,62 @@ class PromptAssistantConfigNotifier
     await _save();
   }
 
+  /// Adds user-entered model IDs for every task that can use a provider.
+  ///
+  /// Some compatible endpoints do not expose a `/models` route, and a
+  /// provider can therefore be saved successfully while the model picker only
+  /// contains the placeholder/default model.  Manual entries are intentionally
+  /// kept as [ModelSource.manual] so a later API refresh cannot remove them.
+  /// Returns the number of model IDs that were not present before this call.
+  Future<int> addManualModels(
+    String providerId,
+    Iterable<String> modelNames,
+  ) async {
+    if (!state.providers.any((provider) => provider.id == providerId)) {
+      throw StateError('Provider not found: $providerId');
+    }
+
+    final names = <String>[];
+    final seen = <String>{};
+    for (final rawName in modelNames) {
+      final name = rawName.trim();
+      if (name.isEmpty || !seen.add(name)) continue;
+      names.add(name);
+    }
+    if (names.isEmpty) return 0;
+
+    final models = [...state.models];
+    var addedNames = 0;
+    for (final name in names) {
+      final alreadyConfigured = models.any(
+        (model) => model.providerId == providerId && model.name == name,
+      );
+      if (!alreadyConfigured) addedNames++;
+      for (final taskType in AssistantTaskType.values) {
+        final exists = models.any(
+          (model) =>
+              model.providerId == providerId &&
+              model.name == name &&
+              model.forTask == taskType,
+        );
+        if (exists) continue;
+        models.add(
+          ModelConfig(
+            providerId: providerId,
+            name: name,
+            displayName: name,
+            forTask: taskType,
+            source: ModelSource.manual,
+          ),
+        );
+      }
+    }
+
+    state = state.copyWith(models: models);
+    await _save();
+    return addedNames;
+  }
+
   /// 以供应商接口返回的 [modelNames] 为准，同步某供应商的模型列表：
   /// - 新增接口里出现、但本地缺失的模型（标记为 [ModelSource.api]）；
   /// - 删除本地 [ModelSource.api] 来源、但已不在接口列表里的“弃用”模型；

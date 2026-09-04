@@ -12365,11 +12365,47 @@ abstract class AppLocalizations {
   /// **'Connection Config'**
   String get promptAssistant_connectionConfig;
 
+  /// No description provided for @promptAssistant_testConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Test connection'**
+  String get promptAssistant_testConnection;
+
+  /// No description provided for @promptAssistant_testingConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing model connection...'**
+  String get promptAssistant_testingConnection;
+
+  /// No description provided for @promptAssistant_connectionTestSucceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Model connection succeeded: {model}'**
+  String promptAssistant_connectionTestSucceeded(Object model);
+
+  /// No description provided for @promptAssistant_connectionTestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Model connection failed: {error}'**
+  String promptAssistant_connectionTestFailed(Object error);
+
   /// No description provided for @promptAssistant_pullModelList.
   ///
   /// In en, this message translates to:
   /// **'Pull model list'**
   String get promptAssistant_pullModelList;
+
+  /// No description provided for @promptAssistant_addModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Add model'**
+  String get promptAssistant_addModel;
+
+  /// No description provided for @promptAssistant_manualModelHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter one or more model IDs, separated by commas or new lines.'**
+  String get promptAssistant_manualModelHint;
 
   /// No description provided for @promptAssistant_editProvider.
   ///
@@ -12400,6 +12436,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Synced {count} models'**
   String promptAssistant_modelsSynced(Object count);
+
+  /// No description provided for @promptAssistant_modelsAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {count} models'**
+  String promptAssistant_modelsAdded(Object count);
+
+  /// No description provided for @promptAssistant_addModelsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to add models: {error}'**
+  String promptAssistant_addModelsFailed(Object error);
 
   /// No description provided for @promptAssistant_pullModelsFailed.
   ///

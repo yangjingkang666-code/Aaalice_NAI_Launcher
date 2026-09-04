@@ -15,6 +15,7 @@ import 'package:nai_launcher/presentation/providers/auth_provider.dart';
 import 'package:nai_launcher/presentation/providers/subscription_provider.dart';
 import 'package:nai_launcher/presentation/agent_settings/providers/agent_settings_provider.dart';
 import 'package:nai_launcher/presentation/agent_settings/providers/agent_prompt_draft_provider.dart';
+import 'package:nai_launcher/presentation/prompt_assistant/providers/prompt_assistant_config_provider.dart';
 import 'package:nai_launcher/presentation/screens/cloud_sync/cloud_sync_screen.dart';
 import 'package:nai_launcher/presentation/screens/settings/sections/account_settings_section.dart';
 import 'package:nai_launcher/presentation/screens/settings/sections/appearance_settings_section.dart';
@@ -327,6 +328,61 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('连接配置'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('prompt-assistant-test-model-openai_chat')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('prompt-assistant-add-model-openai_chat')),
+      findsOneWidget,
+    );
+
+    final addModel = find.byKey(
+      const ValueKey('prompt-assistant-add-model-openai_chat'),
+    );
+    await tester.ensureVisible(addModel);
+    await tester.tap(addModel);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('prompt-assistant-manual-model-input')),
+      findsOneWidget,
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('prompt-assistant-manual-model-input')),
+      'custom-model-a\ncustom-model-b',
+    );
+    await tester.pump();
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const ValueKey('prompt-assistant-save-manual-models')),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('prompt-assistant-save-manual-models')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('prompt-assistant-manual-model-input')),
+      findsNothing,
+    );
+    final promptSection = find.byType(PromptAssistantSettingsSection);
+    final promptContainer = ProviderScope.containerOf(
+      tester.element(promptSection),
+    );
+    final customModels = promptContainer
+        .read(promptAssistantConfigProvider)
+        .models
+        .where(
+          (model) =>
+              model.providerId == 'openai_chat' &&
+              model.name.startsWith('custom-model-'),
+        )
+        .map((model) => model.name)
+        .toSet();
+    expect(customModels, containsAll(['custom-model-a', 'custom-model-b']));
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());

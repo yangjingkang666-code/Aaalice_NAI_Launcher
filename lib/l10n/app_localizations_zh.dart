@@ -6671,7 +6671,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get promptAssistant_connectionConfig => '连接配置';
 
   @override
+  String get promptAssistant_testConnection => '测试连接';
+
+  @override
+  String get promptAssistant_testingConnection => '正在测试模型连接…';
+
+  @override
+  String promptAssistant_connectionTestSucceeded(Object model) {
+    return '模型连接成功：$model';
+  }
+
+  @override
+  String promptAssistant_connectionTestFailed(Object error) {
+    return '模型连接失败：$error';
+  }
+
+  @override
   String get promptAssistant_pullModelList => '拉取模型列表';
+
+  @override
+  String get promptAssistant_addModel => '添加模型';
+
+  @override
+  String get promptAssistant_manualModelHint => '输入一个或多个模型 ID，可用逗号或换行分隔。';
 
   @override
   String get promptAssistant_editProvider => '编辑服务商';
@@ -6688,6 +6710,16 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String promptAssistant_modelsSynced(Object count) {
     return '已同步 $count 个模型';
+  }
+
+  @override
+  String promptAssistant_modelsAdded(Object count) {
+    return '已添加 $count 个模型';
+  }
+
+  @override
+  String promptAssistant_addModelsFailed(Object error) {
+    return '添加模型失败：$error';
   }
 
   @override
@@ -20161,7 +20193,29 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get promptAssistant_connectionConfig => '連線配置';
 
   @override
+  String get promptAssistant_testConnection => '測試連線';
+
+  @override
+  String get promptAssistant_testingConnection => '正在測試模型連線…';
+
+  @override
+  String promptAssistant_connectionTestSucceeded(Object model) {
+    return '模型連線成功：$model';
+  }
+
+  @override
+  String promptAssistant_connectionTestFailed(Object error) {
+    return '模型連線失敗：$error';
+  }
+
+  @override
   String get promptAssistant_pullModelList => '拉取模型列表';
+
+  @override
+  String get promptAssistant_addModel => '新增模型';
+
+  @override
+  String get promptAssistant_manualModelHint => '輸入一個或多個模型 ID，可用逗號或換行分隔。';
 
   @override
   String get promptAssistant_editProvider => '編輯服務商';
@@ -20178,6 +20232,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String promptAssistant_modelsSynced(Object count) {
     return '已同步 $count 個模型';
+  }
+
+  @override
+  String promptAssistant_modelsAdded(Object count) {
+    return '已新增 $count 個模型';
+  }
+
+  @override
+  String promptAssistant_addModelsFailed(Object error) {
+    return '新增模型失敗：$error';
   }
 
   @override

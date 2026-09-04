@@ -6947,7 +6947,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get promptAssistant_connectionConfig => 'Connection Config';
 
   @override
+  String get promptAssistant_testConnection => 'Test connection';
+
+  @override
+  String get promptAssistant_testingConnection => 'Testing model connection...';
+
+  @override
+  String promptAssistant_connectionTestSucceeded(Object model) {
+    return 'Model connection succeeded: $model';
+  }
+
+  @override
+  String promptAssistant_connectionTestFailed(Object error) {
+    return 'Model connection failed: $error';
+  }
+
+  @override
   String get promptAssistant_pullModelList => 'Pull model list';
+
+  @override
+  String get promptAssistant_addModel => 'Add model';
+
+  @override
+  String get promptAssistant_manualModelHint =>
+      'Enter one or more model IDs, separated by commas or new lines.';
 
   @override
   String get promptAssistant_editProvider => 'Edit provider';
@@ -6965,6 +6988,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String promptAssistant_modelsSynced(Object count) {
     return 'Synced $count models';
+  }
+
+  @override
+  String promptAssistant_modelsAdded(Object count) {
+    return 'Added $count models';
+  }
+
+  @override
+  String promptAssistant_addModelsFailed(Object error) {
+    return 'Failed to add models: $error';
   }
 
   @override

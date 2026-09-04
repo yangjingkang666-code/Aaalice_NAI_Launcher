@@ -93,6 +93,32 @@ void main() {
   );
 
   group('Agent chat isolation', () {
+    test('provider model helper exposes models imported for another task', () {
+      const provider = ProviderConfig(
+        id: 'provider-a',
+        name: 'Provider A',
+        baseUrl: 'https://example.test',
+      );
+      const model = ModelConfig(
+        providerId: 'provider-a',
+        name: 'custom-model',
+        displayName: 'Custom model',
+        forTask: AssistantTaskType.llm,
+      );
+      final state = PromptAssistantConfigState.defaults().copyWith(
+        providers: const [provider],
+        models: const [model],
+      );
+
+      final chatModels = state.modelsForProviderTask(
+        providerId: 'provider-a',
+        taskType: AssistantTaskType.chat,
+      );
+
+      expect(chatModels.map((candidate) => candidate.name), ['custom-model']);
+      expect(chatModels.single.forTask, AssistantTaskType.chat);
+    });
+
     test('defaults and default merge do not recreate chat rules', () {
       final defaults = PromptAssistantConfigState.defaults();
       final decoded = PromptAssistantConfigState.decode(

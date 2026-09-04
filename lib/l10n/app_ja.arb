@@ -3099,7 +3099,23 @@
   "promptAssistant_supportsImageInput": "画像入力をサポート",
   "promptAssistant_textOnly": "テキストのみ",
   "promptAssistant_connectionConfig": "接続構成",
+  "promptAssistant_testConnection": "接続をテスト",
+  "promptAssistant_testingConnection": "モデル接続をテストしています…",
+  "promptAssistant_connectionTestSucceeded": "モデル接続に成功しました: {model}",
+  "@promptAssistant_connectionTestSucceeded": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "promptAssistant_connectionTestFailed": "モデル接続に失敗しました: {error}",
+  "@promptAssistant_connectionTestFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "promptAssistant_pullModelList": "モデルリストをプルします",
+  "promptAssistant_addModel": "モデルを追加",
+  "promptAssistant_manualModelHint": "1 つ以上のモデル ID をカンマまたは改行で区切って入力します。",
   "promptAssistant_editProvider": "プロバイダーの編集",
   "promptAssistant_deleteProvider": "プロバイダーを削除します",
   "promptAssistant_pullingModels": "モデル リストを取得しています...",
@@ -3108,6 +3124,18 @@
   "@promptAssistant_modelsSynced": {
     "placeholders": {
       "count": {}
+    }
+  },
+  "promptAssistant_modelsAdded": "{count} モデルを追加しました",
+  "@promptAssistant_modelsAdded": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "promptAssistant_addModelsFailed": "モデルの追加に失敗しました: {error}",
+  "@promptAssistant_addModelsFailed": {
+    "placeholders": {
+      "error": {}
     }
   },
   "promptAssistant_pullModelsFailed": "モデルのプルに失敗しました: {error}",

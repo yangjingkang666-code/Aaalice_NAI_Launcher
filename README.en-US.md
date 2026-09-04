@@ -61,6 +61,7 @@ NAI Launcher is built for people who use NovelAI regularly: generate images, ref
 ### 🤝 Connect
 
 - **Agent Chat**: use the generation sidebar or mobile drawer to search tags, organize Prompts, inspect history, and prepare generations; every operation that may consume Anlas requires separate confirmation.
+- **Model provider settings**: choose separate providers and models for translation, reverse prompting, and Agent Chat; compatible endpoints can add model IDs manually and test the current model connection.
 - **Optional local Agent control API**: after explicit opt-in, DeepSeek Harness and other local Agents can read status, send prompts, abort a run, and plan offline Style Lab experiments over loopback; the Launcher still owns the token, permission prompts, and Anlas audit. See [`plugins/deepseek-harness/README.md`](plugins/deepseek-harness/README.md).
 - **Image reverse-prompt evidence**: optionally run JoyTag and WD EVA02 sequentially as local evidence before the configured image model integrates the result; failures remain auditable and never start generation automatically.
 - **Desktop integrations**: connect Krita Bridge and local ComfyUI workflows to your existing tools.

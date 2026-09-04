@@ -3150,7 +3150,23 @@
   "promptAssistant_supportsImageInput": "Supports image input",
   "promptAssistant_textOnly": "Text only",
   "promptAssistant_connectionConfig": "Connection Config",
+  "promptAssistant_testConnection": "Test connection",
+  "promptAssistant_testingConnection": "Testing model connection...",
+  "promptAssistant_connectionTestSucceeded": "Model connection succeeded: {model}",
+  "@promptAssistant_connectionTestSucceeded": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "promptAssistant_connectionTestFailed": "Model connection failed: {error}",
+  "@promptAssistant_connectionTestFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "promptAssistant_pullModelList": "Pull model list",
+  "promptAssistant_addModel": "Add model",
+  "promptAssistant_manualModelHint": "Enter one or more model IDs, separated by commas or new lines.",
   "promptAssistant_editProvider": "Edit provider",
   "promptAssistant_deleteProvider": "Delete provider",
   "promptAssistant_pullingModels": "Pulling model list...",
@@ -3159,6 +3175,18 @@
   "@promptAssistant_modelsSynced": {
     "placeholders": {
       "count": {}
+    }
+  },
+  "promptAssistant_modelsAdded": "Added {count} models",
+  "@promptAssistant_modelsAdded": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "promptAssistant_addModelsFailed": "Failed to add models: {error}",
+  "@promptAssistant_addModelsFailed": {
+    "placeholders": {
+      "error": {}
     }
   },
   "promptAssistant_pullModelsFailed": "Failed to pull models: {error}",
